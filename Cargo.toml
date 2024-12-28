@@ -1,0 +1,10 @@
+[package]
+name = "textty"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.216", features = ["derive"] }
+serde-aux = "4.5.0"
+thiserror = "2.0.9"
+ureq = { version = "2.12.1", features = ["json"] }
