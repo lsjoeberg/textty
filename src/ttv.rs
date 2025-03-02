@@ -8,35 +8,35 @@ const BASE_URL: &str = "https://texttv.nu/api";
 
 #[derive(Debug, Deserialize)]
 pub struct Breadcrumb {
-    name: String,
-    url: String,
+    pub name: String,
+    pub url: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    num: u16,
+    pub num: u16,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct PageResponse {
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    num: u16,
-    title: String,
-    content: Vec<String>,
-    content_plain: Option<Vec<String>>,
+    pub num: u16,
+    pub title: String,
+    pub content: Vec<String>,
+    pub content_plain: Option<Vec<String>>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    next_page: u16,
+    pub next_page: u16,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    prev_page: u16,
-    date_updated_unix: i64,
-    permalink: String,
+    pub prev_page: u16,
+    pub date_updated_unix: i64,
+    pub permalink: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    id: u64,
-    breadcrumbs: Vec<Breadcrumb>,
+    pub id: u64,
+    pub breadcrumbs: Vec<Breadcrumb>,
 }
 
 impl Display for PageResponse {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Some(plain) = &self.content_plain {
             for page in plain {
-                f.write_str(page)?
+                f.write_str(page)?;
             }
         }
         Ok(())
@@ -66,9 +66,7 @@ impl From<ureq::Error> for Error {
 
 pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
     let url = format!("{BASE_URL}/get/{lo}-{hi}");
-    let response = ureq::get(&url)
-        .query("includePlainTextContent", "1")
-        .call()?;
+    let response = ureq::get(&url).call()?;
 
     let pages: Vec<PageResponse> = response.into_json()?;
     Ok(pages)
@@ -76,9 +74,7 @@ pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
 
 pub fn get_page(number: u16) -> Result<PageResponse, Error> {
     let url = format!("{BASE_URL}/get/{number}");
-    let response = ureq::get(&url)
-        .query("includePlainTextContent", "1")
-        .call()?;
+    let response = ureq::get(&url).call()?;
 
     let mut pages: Vec<PageResponse> = response.into_json()?;
     match pages.pop() {
