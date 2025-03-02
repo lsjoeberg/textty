@@ -5,6 +5,7 @@ use serde_aux::field_attributes::deserialize_number_from_string;
 use std::fmt::{self, Display, Formatter};
 
 const BASE_URL: &str = "https://texttv.nu/api";
+const APP_ID: &str = "textty";
 
 #[derive(Debug, Deserialize)]
 pub struct Breadcrumb {
@@ -66,7 +67,7 @@ impl From<ureq::Error> for Error {
 
 pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
     let url = format!("{BASE_URL}/get/{lo}-{hi}");
-    let response = ureq::get(&url).call()?;
+    let response = ureq::get(&url).query("app", APP_ID).call()?;
 
     let pages: Vec<PageResponse> = response.into_json()?;
     Ok(pages)
@@ -74,7 +75,7 @@ pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
 
 pub fn get_page(number: u16) -> Result<PageResponse, Error> {
     let url = format!("{BASE_URL}/get/{number}");
-    let response = ureq::get(&url).call()?;
+    let response = ureq::get(&url).query("app", APP_ID).call()?;
 
     let mut pages: Vec<PageResponse> = response.into_json()?;
     match pages.pop() {
