@@ -49,35 +49,26 @@ pub enum Error {
     #[error("api error: {0}")]
     ApiStatus(u16),
     #[error("transport error: {0:?}")]
-    Transport(ureq::ErrorKind),
+    Transport(#[from] ureq::Error),
     #[error("invalid page number: {0}")]
     InvalidPageNumber(u16),
     #[error(transparent)]
     IO(#[from] std::io::Error),
 }
 
-impl From<ureq::Error> for Error {
-    fn from(value: ureq::Error) -> Self {
-        match value {
-            ureq::Error::Status(s, ..) => Self::ApiStatus(s),
-            ureq::Error::Transport(t) => Self::Transport(t.kind()),
-        }
-    }
-}
-
 pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
     let url = format!("{BASE_URL}/get/{lo}-{hi}");
-    let response = ureq::get(&url).query("app", APP_ID).call()?;
+    let mut response = ureq::get(&url).query("app", APP_ID).call()?;
 
-    let pages: Vec<PageResponse> = response.into_json()?;
+    let pages: Vec<PageResponse> = response.body_mut().read_json()?;
     Ok(pages)
 }
 
 pub fn get_page(number: u16) -> Result<PageResponse, Error> {
     let url = format!("{BASE_URL}/get/{number}");
-    let response = ureq::get(&url).query("app", APP_ID).call()?;
+    let mut response = ureq::get(&url).query("app", APP_ID).call()?;
 
-    let mut pages: Vec<PageResponse> = response.into_json()?;
+    let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;
     match pages.pop() {
         Some(page) => Ok(page),
         None => Err(Error::InvalidPageNumber(number)),
