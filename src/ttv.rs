@@ -20,7 +20,7 @@ pub struct PageResponse {
     num: u16,
     title: String,
     content: Vec<String>,
-    content_plain: Vec<String>,
+    content_plain: Option<Vec<String>>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     next_page: u16,
     #[serde(deserialize_with = "deserialize_number_from_string")]
@@ -34,8 +34,10 @@ pub struct PageResponse {
 
 impl Display for PageResponse {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for page in &self.content_plain {
-            f.write_str(page)?
+        if let Some(plain) = &self.content_plain {
+            for page in plain {
+                f.write_str(page)?
+            }
         }
         Ok(())
     }
