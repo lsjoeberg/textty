@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::error::Error;
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use std::fmt::{self, Display, Formatter};
@@ -44,18 +45,12 @@ impl Display for PageResponse {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
-pub enum Error {
-    #[error("api error: {0}")]
-    ApiStatus(u16),
-    #[error("transport error: {0:?}")]
-    Transport(#[from] ureq::Error),
-    #[error("invalid page number: {0}")]
-    InvalidPageNumber(u16),
-    #[error(transparent)]
-    IO(#[from] std::io::Error),
-}
-
+/// Get a range of pages from `texttv.nu`; from `lo` to `hi`.
+///
+/// # Errors
+///
+/// Will return `Err` if the API call fails or if the response body
+/// cannot be deserialized.
 pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
     let url = format!("{BASE_URL}/get/{lo}-{hi}");
     let mut response = ureq::get(&url).query("app", APP_ID).call()?;
@@ -64,6 +59,13 @@ pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
     Ok(pages)
 }
 
+/// Get a single page from `texttv.nu`. If the API returns multiple
+/// pages, the first on in order is returned.
+///
+/// # Errors
+///
+/// Will return `Err` if the API call fails or if the response body
+/// cannot be deserialized.
 pub fn get_page(number: u16) -> Result<PageResponse, Error> {
     let url = format!("{BASE_URL}/get/{number}");
     let mut response = ureq::get(&url).query("app", APP_ID).call()?;

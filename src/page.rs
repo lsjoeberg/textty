@@ -2,6 +2,8 @@ use ansi_term::Colour;
 use scraper::{Html, Selector};
 use std::str::FromStr;
 
+use crate::error::Error;
+
 #[derive(PartialEq, Debug)]
 struct PageStyle {
     bg: BgColour,
@@ -18,7 +20,7 @@ impl Default for PageStyle {
 }
 
 impl FromStr for PageStyle {
-    type Err = String;
+    type Err = Error;
 
     // Parse colour codes from space-separated fields, e.g. 'bgB W bgImg'.
     // There can be 1-3 fields present in the string.
@@ -39,7 +41,7 @@ impl FromStr for PageStyle {
             }
             // TODO: Converting referenced GIF from 'bgImg' to ASCII is not yet supported.
             [_, _, _] => Ok(Self::default()),
-            _ => Err(format!("invalid svt colour class: {s}")),
+            _ => Err(Error::ParseHtml(format!("invalid svt colour class: {s}"))),
         }
     }
 }
@@ -59,7 +61,7 @@ impl Default for BgColour {
 }
 
 impl FromStr for BgColour {
-    type Err = String;
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let bg = match s {
@@ -67,7 +69,7 @@ impl FromStr for BgColour {
             "bgBl" => Self::Black,
             "bgW" => Self::White,
             "bgY" => Self::Yellow,
-            _ => return Err(format!("invalid bg: {s}")),
+            _ => return Err(Error::ParseHtml(format!("invalid bg: {s}"))),
         };
         Ok(bg)
     }
@@ -91,7 +93,7 @@ impl Default for FgColour {
 }
 
 impl FromStr for FgColour {
-    type Err = String;
+    type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let fg = match s {
             "bl" => Self::Black,
@@ -101,7 +103,7 @@ impl FromStr for FgColour {
             "R" => Self::Red,
             "W" => Self::White,
             "Y" => Self::Yellow,
-            _ => return Err(format!("invalid fg: {s}")),
+            _ => return Err(Error::ParseHtml(format!("invalid fg: {s}"))),
         };
         Ok(fg)
     }
@@ -130,13 +132,21 @@ impl From<PageStyle> for ansi_term::Style {
     }
 }
 
-pub fn parse(html: &str) -> String {
+/// Parse an HTML page from `texttv.nu/api` to a string that can be
+/// displayed in a terminal.
+///
+/// # Errors
+///
+/// Will return `Err` if `html` cannot be parsed.
+pub fn parse(html: &str) -> Result<String, Error> {
     let fragment = Html::parse_fragment(html);
 
     // Select `span` that represent a line of a page. These can be identified
     // by the `class` attribute, and can be different variants, e.g. `line toprow`,
     // `line`, and `line DH`. Use a wildcard to match all line variants.
-    let selector = Selector::parse(r#"span[class*="line"]"#).unwrap();
+    let Ok(selector) = Selector::parse(r#"span[class*="line"]"#) else {
+        return Err(Error::ParseHtml("invalid texttv.nu HTML".into()));
+    };
 
     // TODO: Preallocate string with some reasonable size.
     let mut page = String::new();
@@ -144,10 +154,12 @@ pub fn parse(html: &str) -> String {
     for element in fragment.select(&selector) {
         for c in element.child_elements() {
             // TODO: Parse into custom type; with `parse` and impl `FromStr`?
-            let class_str = c.attr("class").unwrap();
+            let Some(class_str) = c.attr("class") else {
+                return Err(Error::ParseHtml("no class string to parse".into()));
+            };
             let text = c.text().collect::<String>();
 
-            let svt_color = PageStyle::from_str(class_str).unwrap();
+            let svt_color = PageStyle::from_str(class_str)?;
             let style = ansi_term::Style::from(svt_color);
             page.push_str(&style.paint(&text).to_string());
         }
@@ -157,7 +169,7 @@ pub fn parse(html: &str) -> String {
     // FIXME: Hack
     page.pop(); // Remove last '\n'
 
-    page
+    Ok(page)
 }
 
 #[cfg(test)]
