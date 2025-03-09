@@ -98,6 +98,7 @@ enum FgColour {
     Blue,
     Cyan,
     Green,
+    Magenta,
     Red,
     White,
     Yellow,
@@ -117,6 +118,7 @@ impl FromStr for FgColour {
             "B" => Self::Blue,
             "C" => Self::Cyan,
             "G" => Self::Green,
+            "M" => Self::Magenta,
             "R" => Self::Red,
             "W" | "" => Self::White, // Choice for empty string has no effect since there's no fg char
             "Y" => Self::Yellow,
@@ -143,6 +145,7 @@ impl From<PageStyle> for ansi_term::Style {
             FgColour::Blue => style.fg(Colour::Blue),
             FgColour::Cyan => style.fg(Colour::Cyan),
             FgColour::Green => style.fg(Colour::Green),
+            FgColour::Magenta => style.fg(Colour::Purple),
             FgColour::Red => style.fg(Colour::Red),
             FgColour::White => style.fg(Colour::White),
             FgColour::Yellow => style.fg(Colour::Yellow),
