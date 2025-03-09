@@ -3,11 +3,13 @@ use scraper::{Html, Selector};
 use std::str::FromStr;
 
 use crate::error::Error;
+use crate::mosaic;
 
 #[derive(PartialEq, Debug)]
 struct PageStyle {
     bg: BgColour,
     fg: FgColour,
+    mosaic: bool,
 }
 
 impl Default for PageStyle {
@@ -15,6 +17,7 @@ impl Default for PageStyle {
         Self {
             bg: BgColour::Black,
             fg: FgColour::White,
+            mosaic: false,
         }
     }
 }
@@ -32,15 +35,27 @@ impl FromStr for PageStyle {
                 Ok(Self {
                     bg,
                     fg: FgColour::default(),
+                    mosaic: false,
                 })
             }
             [s0, s1] => {
                 let bg = s0.parse()?;
                 let fg = s1.parse()?;
-                Ok(Self { bg, fg })
+                Ok(Self {
+                    bg,
+                    fg,
+                    mosaic: false,
+                })
             }
-            // TODO: Converting referenced GIF from 'bgImg' to ASCII is not yet supported.
-            [_, _, _] => Ok(Self::default()),
+            [s0, s1, "bgImg"] => {
+                let bg = s0.parse()?;
+                let fg = s1.parse()?;
+                Ok(Self {
+                    bg,
+                    fg,
+                    mosaic: true,
+                })
+            }
             _ => Err(Error::ParseHtml(format!("invalid svt colour class: {s}"))),
         }
     }
@@ -50,6 +65,7 @@ impl FromStr for PageStyle {
 enum BgColour {
     Black,
     Blue,
+    Red,
     White,
     Yellow,
 }
@@ -67,6 +83,7 @@ impl FromStr for BgColour {
         let bg = match s {
             "bgB" => Self::Blue,
             "bgBl" => Self::Black,
+            "bgR" => Self::Red,
             "bgW" => Self::White,
             "bgY" => Self::Yellow,
             _ => return Err(Error::ParseHtml(format!("invalid bg: {s}"))),
@@ -101,7 +118,7 @@ impl FromStr for FgColour {
             "C" => Self::Cyan,
             "G" => Self::Green,
             "R" => Self::Red,
-            "W" => Self::White,
+            "W" | "" => Self::White, // Choice for empty string has no effect since there's no fg char
             "Y" => Self::Yellow,
             _ => return Err(Error::ParseHtml(format!("invalid fg: {s}"))),
         };
@@ -116,6 +133,7 @@ impl From<PageStyle> for ansi_term::Style {
         let style = match value.bg {
             BgColour::Black => style.on(Colour::Black),
             BgColour::Blue => style.on(Colour::Blue),
+            BgColour::Red => style.on(Colour::Red),
             BgColour::White => style.on(Colour::White),
             BgColour::Yellow => style.on(Colour::Yellow),
         };
@@ -130,6 +148,12 @@ impl From<PageStyle> for ansi_term::Style {
             FgColour::Yellow => style.fg(Colour::Yellow),
         }
     }
+}
+
+fn parse_gif_id(attr: &str) -> Option<u64> {
+    let start = attr.find(|c: char| c.is_ascii_digit())?;
+    let end = attr.find(".gif")?;
+    attr[start..end].parse().ok()
 }
 
 /// Parse an HTML page from `texttv.nu/api` to a string that can be
@@ -153,14 +177,24 @@ pub fn parse(html: &str) -> Result<String, Error> {
 
     for element in fragment.select(&selector) {
         for c in element.child_elements() {
-            // TODO: Parse into custom type; with `parse` and impl `FromStr`?
-            let Some(class_str) = c.attr("class") else {
+            let Some(class_attr) = c.attr("class") else {
                 return Err(Error::ParseHtml("no class string to parse".into()));
             };
-            let text = c.text().collect::<String>();
 
-            let svt_color = PageStyle::from_str(class_str)?;
-            let style = ansi_term::Style::from(svt_color);
+            let parsed_style = PageStyle::from_str(class_attr)?;
+
+            // If the HTML style references a GIF image, this means that a teletext mosiac
+            // character should be picked to represent the GIF. Each mosiac has multiple
+            // representations in the HTML-doc, one for each bg/fg colour combination that
+            // exists.
+            let text = if parsed_style.mosaic {
+                let gif_id = c.attr("style").and_then(parse_gif_id).unwrap_or(0);
+                mosaic::from_gif_id(gif_id).to_string()
+            } else {
+                c.text().collect::<String>()
+            };
+
+            let style = ansi_term::Style::from(parsed_style);
             page.push_str(&style.paint(&text).to_string());
         }
         page.push('\n');
@@ -189,6 +223,7 @@ mod tests {
                 expected: PageStyle {
                     bg: BgColour::Blue,
                     fg: FgColour::White,
+                    mosaic: false,
                 },
             },
             TestCase {
@@ -196,11 +231,16 @@ mod tests {
                 expected: PageStyle {
                     bg: BgColour::Black,
                     fg: FgColour::White,
+                    mosaic: false,
                 },
             },
             TestCase {
-                input: "bgB W bgImg",
-                expected: PageStyle::default(),
+                input: "bgB  bgImg",
+                expected: PageStyle {
+                    fg: FgColour::White,
+                    bg: BgColour::Blue,
+                    mosaic: true,
+                },
             },
         ];
         for case in test_cases.iter() {
