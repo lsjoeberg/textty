@@ -17,7 +17,7 @@ fn main() -> Result<(), Error> {
     let response = ttv::get_page(number)?;
 
     // Simple page display.
-    if let Some(html) = response.content.first() {
+    for html in &response.content {
         let page = page::parse(html)?;
         println!("{:-<40}", "");
         println!("{page}");
