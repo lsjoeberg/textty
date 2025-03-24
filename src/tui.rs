@@ -194,6 +194,7 @@ impl App<'_> {
                 self.page_nr = self.prev_nr;
                 self.prev_page()
             }
+            KeyCode::Char('r') => self.get_current_page(),
             KeyCode::Char('q') => {
                 self.quit();
                 Ok(())
