@@ -1,18 +1,23 @@
+use crate::error::Error;
+use crate::mosaic;
 use ansi_term::Colour;
 use scraper::{Html, Selector};
 use std::str::FromStr;
 
-use crate::error::Error;
-use crate::mosaic;
+#[derive(Debug)]
+pub struct Span {
+    pub style: SpanStyle,
+    pub content: String,
+}
 
 #[derive(PartialEq, Debug)]
-struct PageStyle {
-    bg: BgColour,
-    fg: FgColour,
+pub struct SpanStyle {
+    pub bg: BgColour,
+    pub fg: FgColour,
     mosaic: bool,
 }
 
-impl Default for PageStyle {
+impl Default for SpanStyle {
     fn default() -> Self {
         Self {
             bg: BgColour::Black,
@@ -22,7 +27,7 @@ impl Default for PageStyle {
     }
 }
 
-impl FromStr for PageStyle {
+impl FromStr for SpanStyle {
     type Err = Error;
 
     // Parse colour codes from space-separated fields, e.g. 'bgB W bgImg'.
@@ -62,7 +67,7 @@ impl FromStr for PageStyle {
 }
 
 #[derive(PartialEq, Debug)]
-enum BgColour {
+pub enum BgColour {
     Black,
     Blue,
     Red,
@@ -93,7 +98,7 @@ impl FromStr for BgColour {
 }
 
 #[derive(PartialEq, Debug)]
-enum FgColour {
+pub enum FgColour {
     Black,
     Blue,
     Cyan,
@@ -128,8 +133,8 @@ impl FromStr for FgColour {
     }
 }
 
-impl From<PageStyle> for ansi_term::Style {
-    fn from(value: PageStyle) -> Self {
+impl From<SpanStyle> for ansi_term::Style {
+    fn from(value: SpanStyle) -> Self {
         let style = Self::new();
         // Set background
         let style = match value.bg {
@@ -165,7 +170,7 @@ fn parse_gif_id(attr: &str) -> Option<u64> {
 /// # Errors
 ///
 /// Will return `Err` if `html` cannot be parsed.
-pub fn parse(html: &str) -> Result<String, Error> {
+pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
     let fragment = Html::parse_fragment(html);
 
     // Select `span` that represent a line of a page. These can be identified
@@ -176,15 +181,21 @@ pub fn parse(html: &str) -> Result<String, Error> {
     };
 
     // TODO: Preallocate string with some reasonable size.
-    let mut page = String::new();
+    let selection = fragment.select(&selector);
+    let mut page: Vec<Vec<Span>> = if let (_, Some(hi)) = selection.size_hint() {
+        Vec::with_capacity(hi)
+    } else {
+        Vec::new()
+    };
 
     for element in fragment.select(&selector) {
+        let mut line = Vec::new();
         for c in element.child_elements() {
             let Some(class_attr) = c.attr("class") else {
                 return Err(Error::ParseHtml("no class string to parse".into()));
             };
 
-            let parsed_style = PageStyle::from_str(class_attr)?;
+            let parsed_style = SpanStyle::from_str(class_attr)?;
 
             // If the HTML style references a GIF image, this means that a teletext mosiac
             // character should be picked to represent the GIF. Each mosiac has multiple
@@ -197,14 +208,14 @@ pub fn parse(html: &str) -> Result<String, Error> {
                 c.text().collect::<String>()
             };
 
-            let style = ansi_term::Style::from(parsed_style);
-            page.push_str(&style.paint(&text).to_string());
+            let span = Span {
+                content: text,
+                style: parsed_style,
+            };
+            line.push(span);
         }
-        page.push('\n');
+        page.push(line);
     }
-
-    // FIXME: Hack
-    page.pop(); // Remove last '\n'
 
     Ok(page)
 }
@@ -215,7 +226,7 @@ mod tests {
 
     struct TestCase {
         input: &'static str,
-        expected: PageStyle,
+        expected: SpanStyle,
     }
 
     #[test]
@@ -223,7 +234,7 @@ mod tests {
         let test_cases = [
             TestCase {
                 input: "bgB",
-                expected: PageStyle {
+                expected: SpanStyle {
                     bg: BgColour::Blue,
                     fg: FgColour::White,
                     mosaic: false,
@@ -231,7 +242,7 @@ mod tests {
             },
             TestCase {
                 input: "bgBl W",
-                expected: PageStyle {
+                expected: SpanStyle {
                     bg: BgColour::Black,
                     fg: FgColour::White,
                     mosaic: false,
@@ -239,7 +250,7 @@ mod tests {
             },
             TestCase {
                 input: "bgB  bgImg",
-                expected: PageStyle {
+                expected: SpanStyle {
                     fg: FgColour::White,
                     bg: BgColour::Blue,
                     mosaic: true,
@@ -247,7 +258,7 @@ mod tests {
             },
         ];
         for case in test_cases.iter() {
-            let result = PageStyle::from_str(case.input).unwrap();
+            let result = SpanStyle::from_str(case.input).unwrap();
             assert_eq!(result, case.expected);
         }
     }
