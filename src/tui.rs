@@ -60,6 +60,8 @@ impl From<page::FgColour> for ratatui::style::Color {
 pub struct App<'a> {
     page: Text<'a>,
     page_nr: u16,
+    next_nr: u16,
+    prev_nr: u16,
     exit: bool,
 }
 
@@ -67,12 +69,17 @@ impl App<'_> {
     pub fn new() -> Self {
         Self {
             page_nr: 100,
+            next_nr: 101,
+            prev_nr: 100,
             ..Default::default()
         }
     }
 
-    fn set_page(&mut self) -> Result<()> {
+    fn get_current_page(&mut self) -> Result<()> {
         let response = ttv::get_page(self.page_nr)?;
+        self.next_nr = response.next_page;
+        self.prev_nr = response.prev_page;
+
         let raw_page = page::parse(response.content.first().unwrap())?;
 
         let text = Text::from(
@@ -85,8 +92,23 @@ impl App<'_> {
         Ok(())
     }
 
+    fn next_page(&mut self) -> Result<()> {
+        self.page_nr = self.next_nr;
+        self.get_current_page()?;
+        Ok(())
+    }
+
+    fn prev_page(&mut self) -> Result<()> {
+        self.page_nr = self.prev_nr;
+        self.get_current_page()?;
+        Ok(())
+    }
+
     /// Run the application's main loop.
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
+        // Get home page on startup.
+        self.get_current_page()?;
+
         while !self.exit {
             terminal.draw(|frame| self.render(frame))?;
             self.handle_crossterm_events()?;
@@ -118,7 +140,7 @@ impl App<'_> {
     fn handle_crossterm_events(&mut self) -> Result<()> {
         match event::read()? {
             // it's important to check KeyEventKind::Press to avoid handling key release events
-            Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key),
+            Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key)?,
             // Event::Mouse(_) => {}
             // Event::Resize(_, _) => {}
             _ => {}
@@ -127,25 +149,21 @@ impl App<'_> {
     }
 
     /// Handles the key events and updates the state of [`App`].
-    fn on_key_event(&mut self, key: KeyEvent) {
+    fn on_key_event(&mut self, key: KeyEvent) -> Result<()> {
         match key.code {
-            KeyCode::Left => {
-                if self.page_nr > 100 {
-                    self.page_nr -= 1;
-                }
-                // FIXME: Better place for this?
-                self.set_page().unwrap();
-            }
             KeyCode::Right => {
-                if self.page_nr < 801 {
-                    self.page_nr += 1;
-                }
-                // FIXME: Better place for this?
-                self.set_page().unwrap();
+                self.page_nr = self.next_nr;
+                self.next_page()
             }
-            KeyCode::Char('q') => self.quit(),
-            // Add other key handlers here.
-            _ => {}
+            KeyCode::Left => {
+                self.page_nr = self.prev_nr;
+                self.prev_page()
+            }
+            KeyCode::Char('q') => {
+                self.quit();
+                Ok(())
+            }
+            _ => Ok(()),
         }
     }
 
