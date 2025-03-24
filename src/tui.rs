@@ -1,8 +1,9 @@
 use crate::page;
 use crate::ttv;
+use chrono::{DateTime, Local};
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::prelude::Stylize;
+use ratatui::prelude::{Constraint, Direction, Layout, Rect, Stylize};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::Block;
@@ -62,6 +63,7 @@ pub struct App<'a> {
     page_nr: u16,
     next_nr: u16,
     prev_nr: u16,
+    updated_unix: i64,
     exit: bool,
 }
 
@@ -79,6 +81,7 @@ impl App<'_> {
         let response = ttv::get_page(self.page_nr)?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
+        self.updated_unix = response.date_updated_unix;
 
         let raw_page = page::parse(response.content.first().unwrap())?;
 
@@ -122,14 +125,46 @@ impl App<'_> {
     ///
     /// - <https://docs.rs/ratatui/latest/ratatui/widgets/index.html>
     /// - <https://github.com/ratatui/ratatui/tree/main/ratatui-widgets/examples>
+    ///
+    /// - <https://ratatui.rs/concepts/layout/#nesting-layouts>
     fn render(&mut self, frame: &mut Frame) {
-        let title = Line::from("textty").bold().blue().centered();
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Length(24),
+                Constraint::Length(1),
+            ])
+            .split(Rect::new(0, 0, 40, 24 + 1 + 1));
+
+        // Current page number and prev/next.
+        frame.render_widget(
+            Paragraph::new(format!(
+                "{} < {} > {}",
+                self.prev_nr, self.page_nr, self.next_nr
+            ))
+            .centered(),
+            layout[0],
+        );
+
+        // The current page content.
         frame.render_widget(
             Paragraph::new(self.page.clone())
                 .centered()
-                .block(Block::bordered().title(title)),
-            // Rect::new(0, 0, 42, 26).clamp(frame.area()),
-            frame.area(),
+                .block(Block::bordered()),
+            layout[1],
+        );
+
+        // Add page updated timestamp as page footer.
+        let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
+            Some(dt) => dt.with_timezone(&Local).format("%H:%M").to_string(),
+            None => "N/A".to_string(),
+        };
+        frame.render_widget(
+            Paragraph::new(format!("Sidan uppdaterad: {updated}"))
+                .centered()
+                .dim(),
+            layout[2],
         );
     }
 
