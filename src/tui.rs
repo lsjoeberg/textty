@@ -3,7 +3,8 @@ use crate::ttv;
 use chrono::{DateTime, Local};
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::prelude::{Constraint, Direction, Layout, Rect, Stylize};
+use ratatui::layout::Flex;
+use ratatui::prelude::{Constraint, Layout, Rect, Stylize};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
 use ratatui::{widgets::Paragraph, DefaultTerminal, Frame};
@@ -65,6 +66,33 @@ pub struct App<'a> {
     prev_nr: u16,
     updated_unix: i64,
     exit: bool,
+}
+
+#[derive(Debug, Default)]
+pub struct PageLayout {
+    header: Rect,
+    content: Rect,
+    footer: Rect,
+}
+
+impl From<Rect> for PageLayout {
+    fn from(area: Rect) -> Self {
+        let [area] = Layout::horizontal([Constraint::Length(40)])
+            .flex(Flex::Center)
+            .areas(area);
+        let [header, content, footer] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Length(24),
+            Constraint::Length(1),
+        ])
+        .flex(Flex::Center)
+        .areas(area);
+        PageLayout {
+            header,
+            content,
+            footer,
+        }
+    }
 }
 
 impl App<'_> {
@@ -140,22 +168,8 @@ impl App<'_> {
     }
 
     /// Renders the user interface.
-    ///
-    /// This is where you add new widgets. See the following resources for more information:
-    ///
-    /// - <https://docs.rs/ratatui/latest/ratatui/widgets/index.html>
-    /// - <https://github.com/ratatui/ratatui/tree/main/ratatui-widgets/examples>
-    ///
-    /// - <https://ratatui.rs/concepts/layout/#nesting-layouts>
     fn render(&mut self, frame: &mut Frame) {
-        let layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(1),
-                Constraint::Length(24),
-                Constraint::Length(1),
-            ])
-            .split(Rect::new(0, 0, 40, 24 + 1 + 1));
+        let layout = PageLayout::from(frame.area());
 
         // Current page number, prev/next page, and page index in page set.
         // 0                                     40
@@ -168,13 +182,13 @@ impl App<'_> {
                 " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
                 "", self.prev_nr, self.page_nr, self.next_nr, scroll_indicator,
             )),
-            layout[0],
+            layout.header,
         );
 
         // The current page content.
         frame.render_widget(
             Paragraph::new(self.page_set[self.page_index].clone()).centered(),
-            layout[1],
+            layout.content,
         );
 
         // Add page updated timestamp as page footer.
@@ -186,7 +200,7 @@ impl App<'_> {
             Paragraph::new(format!("Sidan uppdaterad: {updated}"))
                 .centered()
                 .dim(),
-            layout[2],
+            layout.footer,
         );
     }
 
