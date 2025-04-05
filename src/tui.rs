@@ -6,7 +6,6 @@ use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::prelude::{Constraint, Direction, Layout, Rect, Stylize};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::Block;
 use ratatui::{widgets::Paragraph, DefaultTerminal, Frame};
 use std::borrow::Cow;
 
@@ -59,7 +58,8 @@ impl From<page::FgColour> for ratatui::style::Color {
 /// The main application which holds the state and logic of the application.
 #[derive(Debug, Default)]
 pub struct App<'a> {
-    page: Text<'a>,
+    page_set: Vec<Text<'a>>,
+    page_index: usize,
     page_nr: u16,
     next_nr: u16,
     prev_nr: u16,
@@ -71,8 +71,6 @@ impl App<'_> {
     pub fn new() -> Self {
         Self {
             page_nr: 100,
-            next_nr: 101,
-            prev_nr: 100,
             ..Default::default()
         }
     }
@@ -81,30 +79,52 @@ impl App<'_> {
         let response = ttv::get_page(self.page_nr)?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
+        self.page_index = 0;
         self.updated_unix = response.date_updated_unix;
 
-        let raw_page = page::parse(response.content.first().unwrap())?;
+        let mut page_set = Vec::with_capacity(response.content.len());
+        for content in &response.content {
+            let raw_page = page::parse(content)?;
+            let text = Text::from(
+                raw_page
+                    .into_iter()
+                    .map(|line| Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>()))
+                    .collect::<Vec<_>>(),
+            );
+            page_set.push(text);
+        }
 
-        let text = Text::from(
-            raw_page
-                .into_iter()
-                .map(|line| Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>()))
-                .collect::<Vec<_>>(),
-        );
-        self.page = text;
+        self.page_set = page_set;
         Ok(())
     }
 
+    /// Go to next page.
     fn next_page(&mut self) -> Result<()> {
         self.page_nr = self.next_nr;
         self.get_current_page()?;
         Ok(())
     }
 
+    /// Go to previous page.
     fn prev_page(&mut self) -> Result<()> {
         self.page_nr = self.prev_nr;
         self.get_current_page()?;
         Ok(())
+    }
+
+    /// Go to previous page in page set.
+    fn scroll_prev(&mut self) {
+        if self.page_index > 0 {
+            self.page_index -= 1;
+        }
+    }
+
+    /// Go to next page in page set.
+    fn scroll_next(&mut self) {
+        let n_pages = self.page_set.len();
+        if n_pages > 1 && self.page_index < n_pages - 1 {
+            self.page_index += 1;
+        }
     }
 
     /// Run the application's main loop.
@@ -137,21 +157,23 @@ impl App<'_> {
             ])
             .split(Rect::new(0, 0, 40, 24 + 1 + 1));
 
-        // Current page number and prev/next.
+        // Current page number, prev/next page, and page index in page set.
+        // 0                                     40
+        // M------------099-<-100->-101---------1/3
+        // |             |     |     |           |
+        // margin      prev  curr  next   index/set
+        let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
         frame.render_widget(
             Paragraph::new(format!(
-                "{} < {} > {}",
-                self.prev_nr, self.page_nr, self.next_nr
-            ))
-            .centered(),
+                " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
+                "", self.prev_nr, self.page_nr, self.next_nr, scroll_indicator,
+            )),
             layout[0],
         );
 
         // The current page content.
         frame.render_widget(
-            Paragraph::new(self.page.clone())
-                .centered()
-                .block(Block::bordered()),
+            Paragraph::new(self.page_set[self.page_index].clone()).centered(),
             layout[1],
         );
 
@@ -193,6 +215,14 @@ impl App<'_> {
             KeyCode::Left => {
                 self.page_nr = self.prev_nr;
                 self.prev_page()
+            }
+            KeyCode::Up => {
+                self.scroll_prev();
+                Ok(())
+            }
+            KeyCode::Down => {
+                self.scroll_next();
+                Ok(())
             }
             KeyCode::Char('r') => self.get_current_page(),
             KeyCode::Char('q') => {
