@@ -14,3 +14,8 @@ serde = { version = "1.0.216", features = ["derive"] }
 serde-aux = "4.5.0"
 thiserror = "2.0.9"
 ureq = { version = "3.0.8", features = ["json"] }
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
