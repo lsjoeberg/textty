@@ -70,6 +70,9 @@ impl FromStr for SpanStyle {
 pub enum BgColour {
     Black,
     Blue,
+    Cyan,
+    Green,
+    Magenta,
     Red,
     White,
     Yellow,
@@ -88,6 +91,9 @@ impl FromStr for BgColour {
         let bg = match s {
             "bgB" => Self::Blue,
             "bgBl" => Self::Black,
+            "bgC" => Self::Cyan,
+            "bgG" => Self::Green,
+            "bgM" => Self::Magenta,
             "bgR" => Self::Red,
             "bgW" => Self::White,
             "bgY" => Self::Yellow,
@@ -140,6 +146,9 @@ impl From<SpanStyle> for ansi_term::Style {
         let style = match value.bg {
             BgColour::Black => style.on(Colour::Black),
             BgColour::Blue => style.on(Colour::Blue),
+            BgColour::Cyan => style.on(Colour::Cyan),
+            BgColour::Green => style.on(Colour::Green),
+            BgColour::Magenta => style.on(Colour::Purple),
             BgColour::Red => style.on(Colour::Red),
             BgColour::White => style.on(Colour::White),
             BgColour::Yellow => style.on(Colour::Yellow),

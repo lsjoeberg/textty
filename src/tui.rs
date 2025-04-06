@@ -34,6 +34,9 @@ impl From<page::BgColour> for ratatui::style::Color {
         match bg {
             page::BgColour::Black => Self::Black, // FIXME: Looks better with `Reset`
             page::BgColour::Blue => Self::Blue,
+            page::BgColour::Cyan => Self::Cyan,
+            page::BgColour::Green => Self::Green,
+            page::BgColour::Magenta => Self::Magenta,
             page::BgColour::Red => Self::Red,
             page::BgColour::White => Self::White,
             page::BgColour::Yellow => Self::Yellow,
