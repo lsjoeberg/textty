@@ -68,7 +68,16 @@ pub struct App<'a> {
     next_nr: u16,
     prev_nr: u16,
     updated_unix: i64,
+    mode: Mode,
+    input_buffer: String,
     exit: bool,
+}
+
+#[derive(Debug, Default, Clone)]
+pub enum Mode {
+    #[default]
+    Normal,
+    Input,
 }
 
 #[derive(Debug, Default)]
@@ -99,13 +108,16 @@ impl From<Rect> for PageLayout {
 }
 
 impl App<'_> {
+    #[must_use]
     pub fn new() -> Self {
         Self {
-            page_nr: 100,
+            page_nr: page::HOME_PAGE_NR,
             ..Default::default()
         }
     }
 
+    /// Fetches the current page from the web, parses the page set into
+    /// [`Text`] objects, and updates the app state.
     fn get_current_page(&mut self) -> Result<()> {
         let response = ttv::get_page(self.page_nr)?;
         self.next_nr = response.next_page;
@@ -175,15 +187,21 @@ impl App<'_> {
         let layout = PageLayout::from(frame.area());
 
         // Current page number, prev/next page, and page index in page set.
-        // 0                                     40
+        // 0                 19-21               40
         // M------------099-<-100->-101---------1/3
         // |             |     |     |           |
         // margin      prev  curr  next   index/set
+
+        // In command-mode, display the input buffer instead of current page.
+        let current_page_str = match self.mode {
+            Mode::Normal => self.page_nr.to_string(),
+            Mode::Input => self.input_buffer.clone(),
+        };
         let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
         frame.render_widget(
             Paragraph::new(format!(
                 " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
-                "", self.prev_nr, self.page_nr, self.next_nr, scroll_indicator,
+                "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
             )),
             layout.header,
         );
@@ -208,9 +226,6 @@ impl App<'_> {
     }
 
     /// Reads the crossterm events and updates the state of [`App`].
-    ///
-    /// If your application needs to perform work in between handling events, you can use the
-    /// [`event::poll`] function to check if there are any events available with a timeout.
     fn handle_crossterm_events(&mut self) -> Result<()> {
         match event::read()? {
             // it's important to check KeyEventKind::Press to avoid handling key release events
@@ -224,7 +239,15 @@ impl App<'_> {
 
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) -> Result<()> {
-        match key.code {
+        match self.mode {
+            Mode::Normal => self.handle_key_event_normal(key.code),
+            Mode::Input => self.handle_key_event_input(key.code),
+        }
+    }
+
+    /// Handle valid events in normal mode.
+    fn handle_key_event_normal(&mut self, code: KeyCode) -> Result<()> {
+        match code {
             KeyCode::Right => {
                 self.page_nr = self.next_nr;
                 self.next_page()
@@ -241,9 +264,50 @@ impl App<'_> {
                 self.scroll_next();
                 Ok(())
             }
+            KeyCode::Char(':') => {
+                self.mode = Mode::Input;
+                self.input_buffer.clear();
+                Ok(())
+            }
             KeyCode::Char('r') => self.get_current_page(),
             KeyCode::Char('q') => {
                 self.quit();
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    /// Handle events valid in the input mode.
+    fn handle_key_event_input(&mut self, code: KeyCode) -> Result<()> {
+        match code {
+            KeyCode::Char(a) if a.is_ascii_digit() => {
+                // Only allow 3-digit page numbers.
+                if self.input_buffer.len() < 3 {
+                    self.input_buffer.push(a);
+                }
+                Ok(())
+            }
+            KeyCode::Backspace => {
+                self.input_buffer.pop();
+                Ok(())
+            }
+            KeyCode::Enter => {
+                let requested_page = self.input_buffer.parse::<u16>()?;
+                // Wrap page number to valid range.
+                if requested_page < page::MIN_PAGE_NR {
+                    self.page_nr = page::MIN_PAGE_NR;
+                } else if requested_page > page::MAX_PAGE_NR {
+                    self.page_nr = page::MAX_PAGE_NR;
+                } else {
+                    self.page_nr = requested_page;
+                }
+                self.input_buffer.clear();
+                self.mode = Mode::Normal;
+                self.get_current_page()
+            }
+            KeyCode::Esc => {
+                self.mode = Mode::Normal;
                 Ok(())
             }
             _ => Ok(()),
