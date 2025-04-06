@@ -264,6 +264,15 @@ impl App<'_> {
                 self.scroll_next();
                 Ok(())
             }
+            KeyCode::Char(a) if a.is_ascii_digit() => {
+                if let Some(i) = a.to_digit(10) {
+                    if (1..9).contains(&i) {
+                        self.page_nr = u16::try_from(i)? * 100;
+                        return self.get_current_page();
+                    }
+                }
+                Ok(())
+            }
             KeyCode::Char(':') => {
                 self.mode = Mode::Input;
                 self.input_buffer.clear();
