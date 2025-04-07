@@ -7,6 +7,7 @@ use ratatui::layout::Flex;
 use ratatui::prelude::{Constraint, Layout, Rect, Stylize};
 use ratatui::style::Style;
 use ratatui::text::{Line, Span, Text};
+use ratatui::widgets::{Block, Borders};
 use ratatui::{widgets::Paragraph, DefaultTerminal, Frame};
 use std::borrow::Cow;
 
@@ -93,9 +94,9 @@ impl From<Rect> for PageLayout {
             .flex(Flex::Center)
             .areas(area);
         let [header, content, footer] = Layout::vertical([
-            Constraint::Length(1),
+            Constraint::Length(2),
             Constraint::Length(24),
-            Constraint::Length(1),
+            Constraint::Length(2),
         ])
         .flex(Flex::Center)
         .areas(area);
@@ -202,7 +203,12 @@ impl App<'_> {
             Paragraph::new(format!(
                 " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
                 "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
-            )),
+            ))
+            .block(
+                Block::new()
+                    .border_style(Style::default().dim())
+                    .borders(Borders::BOTTOM),
+            ),
             layout.header,
         );
 
@@ -220,7 +226,8 @@ impl App<'_> {
         frame.render_widget(
             Paragraph::new(format!("Sidan uppdaterad: {updated}"))
                 .centered()
-                .dim(),
+                .dim()
+                .block(Block::new().borders(Borders::TOP)),
             layout.footer,
         );
     }
