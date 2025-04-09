@@ -15,14 +15,7 @@ use std::borrow::Cow;
 impl From<page::Span> for Span<'_> {
     fn from(value: page::Span) -> Self {
         let mut style = Style::default();
-
-        // Use no-color for `Black` background.
-        // FIXME: This may look strange on non-dark-mode.
-        let bg = value.style.bg;
-        if bg != page::BgColour::Black {
-            style.bg = Some(bg.into());
-        }
-
+        style.bg = Some(value.style.bg.into());
         style.fg = Some(value.style.fg.into());
         Self {
             style,
@@ -34,7 +27,7 @@ impl From<page::Span> for Span<'_> {
 impl From<page::BgColour> for ratatui::style::Color {
     fn from(bg: page::BgColour) -> Self {
         match bg {
-            page::BgColour::Black => Self::Black, // FIXME: Looks better with `Reset`
+            page::BgColour::Black => Self::Black,
             page::BgColour::Blue => Self::Blue,
             page::BgColour::Cyan => Self::Cyan,
             page::BgColour::Green => Self::Green,
