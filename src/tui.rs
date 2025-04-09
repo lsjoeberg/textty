@@ -255,19 +255,19 @@ impl App<'_> {
     /// Handle valid events in normal mode.
     fn handle_key_event_normal(&mut self, code: KeyCode) -> Result<()> {
         match code {
-            KeyCode::Right => {
+            KeyCode::Right | KeyCode::Char('l') => {
                 self.page_nr = self.next_nr;
                 self.next_page()
             }
-            KeyCode::Left => {
+            KeyCode::Left | KeyCode::Char('h') => {
                 self.page_nr = self.prev_nr;
                 self.prev_page()
             }
-            KeyCode::Up => {
+            KeyCode::Up | KeyCode::Char('k') => {
                 self.scroll_prev();
                 Ok(())
             }
-            KeyCode::Down => {
+            KeyCode::Down | KeyCode::Char('j') => {
                 self.scroll_next();
                 Ok(())
             }
