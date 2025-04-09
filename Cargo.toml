@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ansi_term = "0.12.1"
 chrono = "0.4.40"
 color-eyre = "0.6.3"
 crossterm = "0.28.1"

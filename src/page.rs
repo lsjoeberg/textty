@@ -1,6 +1,5 @@
 use crate::error::Error;
 use crate::mosaic;
-use ansi_term::Colour;
 use scraper::{Html, Selector};
 use std::str::FromStr;
 
@@ -140,34 +139,6 @@ impl FromStr for FgColour {
             _ => return Err(Error::ParseHtml(format!("invalid fg: {s}"))),
         };
         Ok(fg)
-    }
-}
-
-impl From<SpanStyle> for ansi_term::Style {
-    fn from(value: SpanStyle) -> Self {
-        let style = Self::new();
-        // Set background
-        let style = match value.bg {
-            BgColour::Black => style.on(Colour::Black),
-            BgColour::Blue => style.on(Colour::Blue),
-            BgColour::Cyan => style.on(Colour::Cyan),
-            BgColour::Green => style.on(Colour::Green),
-            BgColour::Magenta => style.on(Colour::Purple),
-            BgColour::Red => style.on(Colour::Red),
-            BgColour::White => style.on(Colour::White),
-            BgColour::Yellow => style.on(Colour::Yellow),
-        };
-        // Set foreground
-        match value.fg {
-            FgColour::Black => style.fg(Colour::Black),
-            FgColour::Blue => style.fg(Colour::Blue),
-            FgColour::Cyan => style.fg(Colour::Cyan),
-            FgColour::Green => style.fg(Colour::Green),
-            FgColour::Magenta => style.fg(Colour::Purple),
-            FgColour::Red => style.fg(Colour::Red),
-            FgColour::White => style.fg(Colour::White),
-            FgColour::Yellow => style.fg(Colour::Yellow),
-        }
     }
 }
 
