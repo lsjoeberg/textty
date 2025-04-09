@@ -1,5 +1,5 @@
 use crate::page;
-use crate::ttv;
+use crate::texttv;
 use chrono::{DateTime, Local};
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -120,7 +120,7 @@ impl App<'_> {
     /// Fetches the current page from the web, parses the page set into
     /// [`Text`] objects, and updates the app state.
     fn get_current_page(&mut self) -> Result<()> {
-        let response = ttv::get_page(self.page_nr)?;
+        let response = texttv::get_page(self.page_nr)?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
         self.page_index = 0;
