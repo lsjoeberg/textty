@@ -2,13 +2,14 @@ use crate::page;
 use crate::texttv;
 use chrono::{DateTime, Local};
 use color_eyre::Result;
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::Flex;
-use ratatui::prelude::{Constraint, Layout, Rect, Stylize};
-use ratatui::style::Style;
-use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, Borders};
-use ratatui::{widgets::Paragraph, DefaultTerminal, Frame};
+use ratatui::{
+    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    layout::{Constraint, Flex, Layout, Rect},
+    style::{Style, Stylize},
+    text::{Line, Span, Text},
+    widgets::{Block, Borders, Paragraph},
+    DefaultTerminal, Frame,
+};
 use std::borrow::Cow;
 
 impl From<page::Span> for Span<'_> {
