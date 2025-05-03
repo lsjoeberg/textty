@@ -1,6 +1,9 @@
-<h1 align="center">
-    textty
-</h1>
+<!-- LOGO -->
+<p align="center">
+  <img src="./media/banner.png" alt="textty">
+</p>
+
+---
 
 Textty är en TUI-klient för SVT Text-TV, med målet att replikera
 presentationen av innehållet från ursprungsformatet, [teletext].
