@@ -3,11 +3,12 @@ use crate::texttv;
 use chrono::{DateTime, Local};
 use color_eyre::Result;
 use ratatui::{
+    buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
     layout::{Constraint, Flex, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Padding, Paragraph, Widget},
     DefaultTerminal, Frame,
 };
 use std::borrow::Cow;
@@ -68,11 +69,12 @@ pub struct App<'a> {
     exit: bool,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub enum Mode {
     #[default]
     Normal,
     Input,
+    Help,
 }
 
 #[derive(Debug, Default)]
@@ -99,6 +101,43 @@ impl From<Rect> for PageLayout {
             content,
             footer,
         }
+    }
+}
+
+struct HelpWidget {}
+
+const HELP_TEXT: &str = r"
+READING MODE
+←, h  previous page
+→, l  next page
+↑, k  scroll down
+↓, j  scroll up
+r     refresh page
+1-8   jump to page 100-800
+?     show help page
+q     quit application
+
+INPUT MODE
+:     enter page input mode
+↵     submit page number
+Esc   exit input mode
+";
+
+impl Widget for HelpWidget {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let [area] = Layout::horizontal([Constraint::Length(40)])
+            .flex(Flex::Center)
+            .areas(area);
+        let [area] = Layout::vertical([Constraint::Length(24)])
+            .flex(Flex::Center)
+            .areas(area);
+        let help = Paragraph::new(HELP_TEXT).left_aligned().block(
+            Block::bordered()
+                .title(Line::from(" Help ").left_aligned())
+                .title(Line::from(" Esc to Close ").right_aligned())
+                .padding(Padding::uniform(1)),
+        );
+        help.render(area, buf);
     }
 }
 
@@ -171,59 +210,23 @@ impl App<'_> {
         self.get_current_page()?;
 
         while !self.exit {
-            terminal.draw(|frame| self.render(frame))?;
+            terminal.draw(|frame| self.render_ui(frame))?;
             self.handle_crossterm_events()?;
         }
         Ok(())
     }
 
     /// Renders the user interface.
-    fn render(&mut self, frame: &mut Frame) {
-        let layout = PageLayout::from(frame.area());
-
-        // Current page number, prev/next page, and page index in page set.
-        // 0                 19-21               40
-        // M------------099-<-100->-101---------1/3
-        // |             |     |     |           |
-        // margin      prev  curr  next   index/set
-
-        // In command-mode, display the input buffer instead of current page.
-        let current_page_str = match self.mode {
-            Mode::Normal => self.page_nr.to_string(),
-            Mode::Input => self.input_buffer.clone(),
-        };
-        let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
-        frame.render_widget(
-            Paragraph::new(format!(
-                " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
-                "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
-            ))
-            .block(
-                Block::new()
-                    .border_style(Style::default().dim())
-                    .borders(Borders::BOTTOM),
-            ),
-            layout.header,
-        );
-
-        // The current page content.
-        frame.render_widget(
-            Paragraph::new(self.page_set[self.page_index].clone()).centered(),
-            layout.content,
-        );
-
-        // Add page updated timestamp as page footer.
-        let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
-            Some(dt) => dt.with_timezone(&Local).format("%H:%M").to_string(),
-            None => "N/A".to_string(),
-        };
-        frame.render_widget(
-            Paragraph::new(format!("Sidan uppdaterad: {updated}"))
-                .centered()
-                .dim()
-                .block(Block::new().borders(Borders::TOP)),
-            layout.footer,
-        );
+    fn render_ui(&self, frame: &mut Frame) {
+        match self.mode {
+            Mode::Normal | Mode::Input => {
+                frame.render_widget(self, frame.area());
+            }
+            Mode::Help => {
+                let hw = HelpWidget {};
+                frame.render_widget(hw, frame.area());
+            }
+        }
     }
 
     /// Reads the crossterm events and updates the state of [`App`].
@@ -243,6 +246,10 @@ impl App<'_> {
         match self.mode {
             Mode::Normal => self.handle_key_event_normal(key.code),
             Mode::Input => self.handle_key_event_input(key.code),
+            Mode::Help => {
+                self.handle_key_event_help(key.code);
+                Ok(())
+            }
         }
     }
 
@@ -277,6 +284,10 @@ impl App<'_> {
             KeyCode::Char(':') => {
                 self.mode = Mode::Input;
                 self.input_buffer.clear();
+                Ok(())
+            }
+            KeyCode::Char('?') => {
+                self.mode = Mode::Help;
                 Ok(())
             }
             KeyCode::Char('r') => self.get_current_page(),
@@ -324,8 +335,60 @@ impl App<'_> {
         }
     }
 
+    /// Handle events valid in the help mode.
+    fn handle_key_event_help(&mut self, code: KeyCode) {
+        if code == KeyCode::Esc {
+            self.mode = Mode::Normal;
+        }
+    }
+
     /// Quit the application.
     fn quit(&mut self) {
         self.exit = true;
+    }
+}
+
+impl Widget for &App<'_> {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let layout = PageLayout::from(area);
+
+        // Current page number, prev/next page, and page index in page set.
+        // 0                 19-21               40
+        // M------------099-<-100->-101---------1/3
+        // |             |     |     |           |
+        // margin      prev  curr  next   index/set
+
+        // In command-mode, display the input buffer instead of current page.
+        let current_page_str = match self.mode {
+            Mode::Normal => self.page_nr.to_string(),
+            Mode::Input => self.input_buffer.clone(),
+            Mode::Help => String::new(), // FIXME: Remove.
+        };
+        let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
+        let header = Paragraph::new(format!(
+            " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
+            "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
+        ))
+        .block(
+            Block::new()
+                .border_style(Style::default().dim())
+                .borders(Borders::BOTTOM),
+        );
+        header.render(layout.header, buf);
+
+        // The current page content.
+        let content = Paragraph::new(self.page_set[self.page_index].clone()).centered();
+        content.render(layout.content, buf);
+
+        // Add page updated timestamp as page footer.
+        let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
+            Some(dt) => dt.with_timezone(&Local).format("%H:%M").to_string(),
+            None => "N/A".to_string(),
+        };
+        let footer = Paragraph::new(format!("Sidan uppdaterad: {updated}"))
+            .centered()
+            .dim()
+            .block(Block::new().borders(Borders::TOP));
+        footer.render(layout.footer, buf);
     }
 }
