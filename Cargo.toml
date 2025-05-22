@@ -8,7 +8,7 @@ readme = "README.md"
 license = "MIT"
 keywords = ["teletext", "tui"]
 categories = ["command-line-utilities"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = "0.4.40"
