@@ -190,14 +190,14 @@ impl App<'_> {
     }
 
     /// Go to previous page in page set.
-    fn scroll_prev(&mut self) {
+    const fn scroll_prev(&mut self) {
         if self.page_index > 0 {
             self.page_index -= 1;
         }
     }
 
     /// Go to next page in page set.
-    fn scroll_next(&mut self) {
+    const fn scroll_next(&mut self) {
         let n_pages = self.page_set.len();
         if n_pages > 1 && self.page_index < n_pages - 1 {
             self.page_index += 1;
@@ -343,7 +343,7 @@ impl App<'_> {
     }
 
     /// Quit the application.
-    fn quit(&mut self) {
+    const fn quit(&mut self) {
         self.exit = true;
     }
 }
