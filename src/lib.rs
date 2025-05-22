@@ -1,5 +1,5 @@
-pub mod error;
+mod error;
 mod mosaic;
-pub mod page;
-pub mod texttv;
+mod page;
+mod texttv;
 pub mod tui;
