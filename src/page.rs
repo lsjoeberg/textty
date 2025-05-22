@@ -181,8 +181,8 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
 
             let parsed_style = SpanStyle::from_str(class_attr)?;
 
-            // If the HTML style references a GIF image, this means that a teletext mosiac
-            // character should be picked to represent the GIF. Each mosiac has multiple
+            // If the HTML style references a GIF image, this means that a teletext mosaic
+            // character should be picked to represent the GIF. Each mosaic has multiple
             // representations in the HTML-doc, one for each bg/fg colour combination that
             // exists.
             let text = if parsed_style.mosaic {

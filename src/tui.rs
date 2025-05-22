@@ -189,14 +189,14 @@ impl App<'_> {
         Ok(())
     }
 
-    /// Go to previous page in page set.
+    /// Go to previous page in the page set.
     const fn scroll_prev(&mut self) {
         if self.page_index > 0 {
             self.page_index -= 1;
         }
     }
 
-    /// Go to next page in page set.
+    /// Go to next page in the page set.
     const fn scroll_next(&mut self) {
         let n_pages = self.page_set.len();
         if n_pages > 1 && self.page_index < n_pages - 1 {
@@ -205,6 +205,10 @@ impl App<'_> {
     }
 
     /// Run the application's main loop.
+    ///
+    /// # Errors
+    ///
+    /// Will return any `Err` that may occur in the application.
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
         // Get home page on startup.
         self.get_current_page()?;
@@ -352,7 +356,7 @@ impl Widget for &App<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let layout = PageLayout::from(area);
 
-        // Current page number, prev/next page, and page index in page set.
+        // Current page number, prev/next page, and page index in the page set.
         // 0                 19-21               40
         // M------------099-<-100->-101---------1/3
         // |             |     |     |           |
