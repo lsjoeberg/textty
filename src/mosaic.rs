@@ -8,7 +8,7 @@
 */
 
 #[allow(clippy::unreadable_literal)]
-pub fn from_gif_id(id: u64) -> char {
+pub const fn from_gif_id(id: u64) -> char {
     match id {
         // texttv.nu gifs
         1164105659 | 251408512 | 3287848953 | 2335531887 | 2862847544 | 1739010369 => '🬞',

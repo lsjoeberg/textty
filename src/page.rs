@@ -13,7 +13,7 @@ pub struct Span {
     pub content: String,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct SpanStyle {
     pub bg: BgColour,
     pub fg: FgColour,
@@ -69,7 +69,7 @@ impl FromStr for SpanStyle {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum BgColour {
     Black,
     Blue,
@@ -106,7 +106,7 @@ impl FromStr for BgColour {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum FgColour {
     Black,
     Blue,
@@ -181,8 +181,8 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
 
             let parsed_style = SpanStyle::from_str(class_attr)?;
 
-            // If the HTML style references a GIF image, this means that a teletext mosiac
-            // character should be picked to represent the GIF. Each mosiac has multiple
+            // If the HTML style references a GIF image, this means that a teletext mosaic
+            // character should be picked to represent the GIF. Each mosaic has multiple
             // representations in the HTML-doc, one for each bg/fg colour combination that
             // exists.
             let text = if parsed_style.mosaic {
