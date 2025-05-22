@@ -17,3 +17,6 @@ ureq = { version = "3.0.8", features = ["json"] }
 strip = true
 lto = true
 codegen-units = 1
+
+[lints.clippy]
+pedantic = "warn"
