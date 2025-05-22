@@ -49,6 +49,81 @@ det finns två alternativ för att rendera innehållet korrekt i terminalen:
    kompetenta emulatorer som klarar att rendera teletext-glyfer utan
    konfiguration är [ghostty] och [wezterm].
 
+## Användning
+
+### Gränssnitt och navigation
+
+Gränssnittet består av en *navigationsrad* ovanför visning av sidans innehåll.
+
+```text
+  läser 8e bladet av 15 på sida 331 ─┐
+                                     │
+----------------------------------------
+             330 ◀ 331 ▶ 332        8/15
+----------------------------------------
+              │     │     └ nästa sida
+              │     └ nuvarande sida
+              └ föregående sida
+```
+
+#### Läsläge
+
+| Keys     | Action               |
+|:---------|:---------------------|
+| `←`, `h` | previous page        |
+| `→`, `l` | next page            |
+| `↑`, `k` | scroll down          |
+| `↓`, `j` | scroll up            |
+| `r`      | refresh page         |
+| `1`-`8`  | jump to page 100-800 |
+| `?`      | show help page       |
+| `q`      | quit application     |
+
+#### Kommandoläge
+
+| Keys  | Action                |
+|:------|:----------------------|
+| `:`   | enter page input mode |
+| `↵`   | submit page number    |
+| `Esc` | exit input mode       |
+
+### Demonstration
+
+<details>
+<summary>Sida 100: Hem</summary>
+<p align="center">
+  <img src="./media/100.png" alt="sida-100">
+</p>
+</details>
+
+<details>
+<summary>Sida 101: Inrikes</summary>
+<p align="center">
+  <img src="./media/101.png" alt="sida-101">
+</p>
+</details>
+
+<details>
+<summary>Sida 104: Utrikes</summary>
+<p align="center">
+  <img src="./media/104.png" alt="sida-104">
+</p>
+</details>
+
+<details>
+<summary>Sida 300: Sport</summary>
+<p align="center">
+  <img src="./media/300.png" alt="sida-300">
+</p>
+</details>
+
+<details>
+<summary>Sida 401: Väderkarta</summary>
+<p align="center">
+  <img src="./media/401.png" alt="sida-401">
+</p>
+</details>
+
 ## Alternativa klienter
 
 - [wille1101/sttg](https://github.com/wille1101/sttg)
@@ -63,12 +138,12 @@ som tillhandahålls jämte webbsidan. SVT ansvarar givetvis för journalistik oc
 publikation av sidorna på Text-TV, också tillgängligt på [svt.se/text-tv]. Mer
 och uppdaterad information om SVT Text-TV finns på sida [711].
 
-<!-- referenser -->
-[teletext]: https://sv.wikipedia.org/wiki/Text-TV 
+<!-- Referenser -->
+[teletext]: https://sv.wikipedia.org/wiki/Text-TV
 [deathscrolling]: https://www.urbandictionary.com/define.php?term=deathscrolling
 [teletext-standarden]: https://en.wikipedia.org/wiki/Teletext_character_set
 [401]: https://www.svt.se/text-tv/401
-[block mosaics]: https://en.wikipedia.org/wiki/Teletext_character_set#G1_block_mosaics 
+[block mosaics]: https://en.wikipedia.org/wiki/Teletext_character_set#G1_block_mosaics
 [ghostty]: https://ghostty.org/
 [wezterm]: https://wezterm.org/
 [TextTv.nu]: https://texttv.nu/blogg/texttv-api
