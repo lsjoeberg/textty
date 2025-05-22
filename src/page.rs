@@ -13,7 +13,7 @@ pub struct Span {
     pub content: String,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct SpanStyle {
     pub bg: BgColour,
     pub fg: FgColour,
@@ -69,7 +69,7 @@ impl FromStr for SpanStyle {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum BgColour {
     Black,
     Blue,
@@ -106,7 +106,7 @@ impl FromStr for BgColour {
     }
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum FgColour {
     Black,
     Blue,

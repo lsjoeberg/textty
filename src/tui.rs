@@ -69,7 +69,7 @@ pub struct App<'a> {
     exit: bool,
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum Mode {
     #[default]
     Normal,
