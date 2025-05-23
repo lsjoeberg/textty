@@ -3,10 +3,6 @@ use crate::mosaic;
 use scraper::{Html, Selector};
 use std::str::FromStr;
 
-pub const HOME_PAGE_NR: u16 = 100;
-pub const MIN_PAGE_NR: u16 = 100;
-pub const MAX_PAGE_NR: u16 = 801;
-
 #[derive(Debug)]
 pub struct Span {
     pub style: SpanStyle,
