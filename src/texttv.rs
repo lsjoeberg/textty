@@ -8,6 +8,10 @@ use std::fmt::{self, Display, Formatter};
 const BASE_URL: &str = "https://texttv.nu/api";
 const APP_ID: &str = "textty";
 
+pub const HOME_PAGE_NR: u16 = 100;
+pub const MIN_PAGE_NR: u16 = 100;
+pub const MAX_PAGE_NR: u16 = 801;
+
 #[derive(Debug, Deserialize)]
 pub struct Breadcrumb {
     pub name: String,
@@ -45,14 +49,29 @@ impl Display for PageResponse {
     }
 }
 
+#[derive(Copy, Clone)]
+pub struct PageNumber(u16);
+
+impl TryFrom<u16> for PageNumber {
+    type Error = Error;
+
+    fn try_from(value: u16) -> Result<Self, Self::Error> {
+        if (MIN_PAGE_NR..=MAX_PAGE_NR).contains(&value) {
+            Ok(Self(value))
+        } else {
+            Err(Error::InvalidPageNumber(value))
+        }
+    }
+}
+
 /// Get a range of pages from `texttv.nu`; from `lo` to `hi`.
 ///
 /// # Errors
 ///
 /// Will return `Err` if the API call fails or if the response body
 /// cannot be deserialized.
-pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
-    let url = format!("{BASE_URL}/get/{lo}-{hi}");
+pub fn get_page_range(lo: PageNumber, hi: PageNumber) -> Result<Vec<PageResponse>, Error> {
+    let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
     let mut response = ureq::get(&url).query("app", APP_ID).call()?;
 
     let pages: Vec<PageResponse> = response.body_mut().read_json()?;
@@ -66,13 +85,13 @@ pub fn get_page_range(lo: u16, hi: u16) -> Result<Vec<PageResponse>, Error> {
 ///
 /// Will return `Err` if the API call fails or if the response body
 /// cannot be deserialized.
-pub fn get_page(number: u16) -> Result<PageResponse, Error> {
-    let url = format!("{BASE_URL}/get/{number}");
+pub fn get_page(number: PageNumber) -> Result<PageResponse, Error> {
+    let url = format!("{BASE_URL}/get/{}", number.0);
     let mut response = ureq::get(&url).query("app", APP_ID).call()?;
 
     let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;
     match pages.pop() {
         Some(page) => Ok(page),
-        None => Err(Error::InvalidPageNumber(number)),
+        None => Err(Error::InvalidPageNumber(number.0)),
     }
 }

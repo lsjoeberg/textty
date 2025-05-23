@@ -1,15 +1,14 @@
-use crate::page;
-use crate::texttv;
+use crate::{page, texttv};
 use chrono::{DateTime, Local};
 use color_eyre::Result;
 use ratatui::{
+    DefaultTerminal, Frame,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
     layout::{Constraint, Flex, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Padding, Paragraph, Widget},
-    DefaultTerminal, Frame,
 };
 use std::borrow::Cow;
 
@@ -145,7 +144,7 @@ impl App<'_> {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            page_nr: page::HOME_PAGE_NR,
+            page_nr: texttv::HOME_PAGE_NR,
             ..Default::default()
         }
     }
@@ -153,7 +152,7 @@ impl App<'_> {
     /// Fetches the current page from the web, parses the page set into
     /// [`Text`] objects, and updates the app state.
     fn get_current_page(&mut self) -> Result<()> {
-        let response = texttv::get_page(self.page_nr)?;
+        let response = texttv::get_page(texttv::PageNumber::try_from(self.page_nr)?)?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
         self.page_index = 0;
@@ -320,10 +319,10 @@ impl App<'_> {
             KeyCode::Enter => {
                 let requested_page = self.input_buffer.parse::<u16>()?;
                 // Wrap page number to valid range.
-                if requested_page < page::MIN_PAGE_NR {
-                    self.page_nr = page::MIN_PAGE_NR;
-                } else if requested_page > page::MAX_PAGE_NR {
-                    self.page_nr = page::MAX_PAGE_NR;
+                if requested_page < texttv::MIN_PAGE_NR {
+                    self.page_nr = texttv::MIN_PAGE_NR;
+                } else if requested_page > texttv::MAX_PAGE_NR {
+                    self.page_nr = texttv::MAX_PAGE_NR;
                 } else {
                     self.page_nr = requested_page;
                 }
