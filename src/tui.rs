@@ -319,13 +319,7 @@ impl App<'_> {
             KeyCode::Enter => {
                 let requested_page = self.input_buffer.parse::<u16>()?;
                 // Wrap page number to valid range.
-                if requested_page < texttv::MIN_PAGE_NR {
-                    self.page_nr = texttv::MIN_PAGE_NR;
-                } else if requested_page > texttv::MAX_PAGE_NR {
-                    self.page_nr = texttv::MAX_PAGE_NR;
-                } else {
-                    self.page_nr = requested_page;
-                }
+                self.page_nr = requested_page.clamp(texttv::MIN_PAGE_NR, texttv::MAX_PAGE_NR);
                 self.input_buffer.clear();
                 self.mode = Mode::Normal;
                 self.get_current_page()
