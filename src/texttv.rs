@@ -3,6 +3,7 @@
 use crate::error::Error;
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
+use std::cmp::PartialOrd;
 use std::fmt::{self, Display, Formatter};
 
 const BASE_URL: &str = "https://texttv.nu/api";
@@ -76,7 +77,7 @@ impl Display for PageResponse {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PageNumber(u16);
 
 impl TryFrom<u16> for PageNumber {
@@ -98,6 +99,9 @@ impl TryFrom<u16> for PageNumber {
 /// * Returns [`Error::InvaldPageRange`] if `lo` is not less than or equal to `hi`.
 /// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
 pub fn get_page_range(lo: PageNumber, hi: PageNumber) -> Result<Vec<PageResponse>, Error> {
+    if hi > lo {
+        return Err(Error::InvalidPageRange { lo: lo.0, hi: hi.0 });
+    }
     let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
     let mut response = ureq::get(&url).query("app", APP_ID).call()?;
 
