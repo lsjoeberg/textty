@@ -111,8 +111,8 @@ const HELP_TEXT: &str = r"
 READING MODE
 ←, h  previous page
 →, l  next page
-↑, k  scroll down
-↓, j  scroll up
+↑, k  scroll up
+↓, j  scroll down
 r     refresh page
 1-8   jump to page 100-800
 ?     show help page
