@@ -116,7 +116,7 @@ impl Client {
         lo: PageNumber,
         hi: PageNumber,
     ) -> Result<Vec<PageResponse>, Error> {
-        if hi > lo {
+        if hi < lo {
             return Err(Error::InvalidPageRange { lo: lo.0, hi: hi.0 });
         }
         let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
