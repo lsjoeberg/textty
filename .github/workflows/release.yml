@@ -11,8 +11,6 @@ jobs:
   release:
     name: Release for ${{ matrix.target }}
     runs-on: ${{ matrix.runner }}
-    env:
-      GH_TOKEN: ${{ github.token }}
     strategy:
       matrix:
         include:
@@ -61,6 +59,7 @@ jobs:
           mv ${{ matrix.artifact }} ${{ matrix.name }}
 
       - name: Upload binary to release
-        run: |
-          gh release upload ${{ github.event.release.tag_name }} \
-            target/${{ matrix.target }}/release/${{ matrix.name }}
+        uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: target/${{ matrix.target }}/release/${{ matrix.name }}
