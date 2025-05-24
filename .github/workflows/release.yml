@@ -10,7 +10,7 @@ permissions:
 jobs:
   release:
     name: Release for ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
