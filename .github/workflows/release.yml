@@ -1,8 +1,8 @@
-name: Release
+name: Release Build
 
 on:
-  push:
-    tags: [ "v[0-9]+.[0-9]+.[0-9]+" ]
+  release:
+    types: [ created ]
 
 permissions:
   contents: write
@@ -14,25 +14,25 @@ jobs:
     strategy:
       matrix:
         include:
-          - prefix: linux-amd64
+          - target: x86_64-unknown-linux-gnu
             runner: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
             artifact: textty
+            name: textty-linux-amd64
 
-          - prefix: windows-amd64
+          - target: x86_64-pc-windows-msvc
             runner: windows-latest
-            target: x86_64-pc-windows-msvc
             artifact: textty.exe
+            name: textty-windows-amd64.exe
 
-          - prefix: macos-amd64
+          - target: x86_64-apple-darwin
             runner: macos-latest
-            target: x86_64-apple-darwin
             artifact: textty
+            name: textty-macos-amd64
 
-          - prefix: macos-arm64
+          - target: aarch64-apple-darwin
             runner: macos-latest
-            target: aarch64-apple-darwin
             artifact: textty
+            name: textty-macos-arm64
 
     steps:
       - name: Checkout
@@ -50,12 +50,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: target/${{ matrix.target }}/release/${{ matrix.artifact }}
-          name: ${{ matrix.prefix }}-${{ matrix.artifact }}
+          name: ${{ matrix.name }}
           retention-days: 5
 
+      - name: Rename binary
+        run: |
+          cd target/${{ matrix.target }}/release
+          mv ${{ matrix.artifact }} ${{ matrix.name }}
+
       - name: Upload binary to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          file: target/${{ matrix.target }}/release/${{ matrix.artifact }}
-          asset_name: ${{ matrix.prefix }}-${{ matrix.artifact }}
-          draft: true
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} \
+            target/${{ matrix.target }}/release/${{ matrix.name }}
