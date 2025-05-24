@@ -65,6 +65,7 @@ pub struct App<'a> {
     updated_unix: i64,
     mode: Mode,
     input_buffer: String,
+    use_plain: bool,
     exit: bool,
 }
 
@@ -142,9 +143,10 @@ impl Widget for HelpWidget {
 
 impl App<'_> {
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new(plain: bool) -> Self {
         Self {
             page_nr: texttv::HOME_PAGE_NR,
+            use_plain: plain,
             ..Default::default()
         }
     }
@@ -159,15 +161,25 @@ impl App<'_> {
         self.updated_unix = response.date_updated_unix;
 
         let mut page_set = Vec::with_capacity(response.content.len());
-        for content in &response.content {
-            let raw_page = page::parse(content)?;
-            let text = Text::from(
-                raw_page
-                    .into_iter()
-                    .map(|line| Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>()))
-                    .collect::<Vec<_>>(),
-            );
-            page_set.push(text);
+        if self.use_plain {
+            if let Some(content_plain) = response.content_plain {
+                for content in content_plain {
+                    page_set.push(Text::from(content));
+                }
+            }
+        } else {
+            for content in &response.content {
+                let raw_page = page::parse(content)?;
+                let text = Text::from(
+                    raw_page
+                        .into_iter()
+                        .map(|line| {
+                            Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>())
+                        })
+                        .collect::<Vec<_>>(),
+                );
+                page_set.push(text);
+            }
         }
 
         self.page_set = page_set;

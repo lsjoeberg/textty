@@ -103,7 +103,9 @@ pub fn get_page_range(lo: PageNumber, hi: PageNumber) -> Result<Vec<PageResponse
         return Err(Error::InvalidPageRange { lo: lo.0, hi: hi.0 });
     }
     let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
-    let mut response = ureq::get(&url).query("app", APP_ID).call()?;
+    let mut response = ureq::get(&url)
+        .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+        .call()?;
 
     let pages: Vec<PageResponse> = response.body_mut().read_json()?;
     Ok(pages)
@@ -117,7 +119,9 @@ pub fn get_page_range(lo: PageNumber, hi: PageNumber) -> Result<Vec<PageResponse
 /// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
 pub fn get_page(number: PageNumber) -> Result<PageResponse, Error> {
     let url = format!("{BASE_URL}/get/{}", number.0);
-    let mut response = ureq::get(&url).query("app", APP_ID).call()?;
+    let mut response = ureq::get(&url)
+        .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+        .call()?;
 
     let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;
     match pages.pop() {

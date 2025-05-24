@@ -1,3 +1,4 @@
+pub mod cli;
 mod error;
 mod mosaic;
 mod page;
