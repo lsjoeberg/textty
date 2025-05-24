@@ -57,6 +57,7 @@ impl From<page::FgColour> for ratatui::style::Color {
 /// The main application which holds the state and logic of the application.
 #[derive(Debug, Default)]
 pub struct App<'a> {
+    client: texttv::Client,
     page_set: Vec<Text<'a>>,
     page_index: usize,
     page_nr: u16,
@@ -154,7 +155,9 @@ impl App<'_> {
     /// Fetches the current page from the web, parses the page set into
     /// [`Text`] objects, and updates the app state.
     fn get_current_page(&mut self) -> Result<()> {
-        let response = texttv::get_page(texttv::PageNumber::try_from(self.page_nr)?)?;
+        let response = self
+            .client
+            .get_page(texttv::PageNumber::try_from(self.page_nr)?)?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
         self.page_index = 0;

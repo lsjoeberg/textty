@@ -92,40 +92,62 @@ impl TryFrom<u16> for PageNumber {
     }
 }
 
-/// Get a range of pages from `texttv.nu`; from `lo` to `hi`.
-///
-/// # Errors
-///
-/// * Returns [`Error::InvaldPageRange`] if `lo` is not less than or equal to `hi`.
-/// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
-pub fn get_page_range(lo: PageNumber, hi: PageNumber) -> Result<Vec<PageResponse>, Error> {
-    if hi > lo {
-        return Err(Error::InvalidPageRange { lo: lo.0, hi: hi.0 });
-    }
-    let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
-    let mut response = ureq::get(&url)
-        .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
-        .call()?;
-
-    let pages: Vec<PageResponse> = response.body_mut().read_json()?;
-    Ok(pages)
+#[derive(Debug)]
+pub struct Client {
+    inner: ureq::Agent,
 }
 
-/// Get a single page from `texttv.nu`. If the API returns multiple
-/// pages, the first on in order is returned.
-///
-/// # Errors
-///
-/// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
-pub fn get_page(number: PageNumber) -> Result<PageResponse, Error> {
-    let url = format!("{BASE_URL}/get/{}", number.0);
-    let mut response = ureq::get(&url)
-        .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
-        .call()?;
+impl Default for Client {
+    fn default() -> Self {
+        let agent = ureq::agent();
+        Self { inner: agent }
+    }
+}
 
-    let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;
-    match pages.pop() {
-        Some(page) => Ok(page),
-        None => Err(Error::InvalidPageNumber(number.0)),
+impl Client {
+    /// Get a range of pages from `texttv.nu`; from `lo` to `hi`.
+    ///
+    /// # Errors
+    ///
+    /// * Returns [`Error::InvaldPageRange`] if `lo` is not less than or equal to `hi`.
+    /// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
+    pub fn get_page_range(
+        &self,
+        lo: PageNumber,
+        hi: PageNumber,
+    ) -> Result<Vec<PageResponse>, Error> {
+        if hi > lo {
+            return Err(Error::InvalidPageRange { lo: lo.0, hi: hi.0 });
+        }
+        let url = format!("{BASE_URL}/get/{}-{}", lo.0, hi.0);
+        let mut response = self
+            .inner
+            .get(&url)
+            .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+            .call()?;
+
+        let pages: Vec<PageResponse> = response.body_mut().read_json()?;
+        Ok(pages)
+    }
+
+    /// Get a single page from `texttv.nu`. If the API returns multiple
+    /// pages, the first on in order is returned.
+    ///
+    /// # Errors
+    ///
+    /// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
+    pub fn get_page(&self, number: PageNumber) -> Result<PageResponse, Error> {
+        let url = format!("{BASE_URL}/get/{}", number.0);
+        let mut response = self
+            .inner
+            .get(&url)
+            .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+            .call()?;
+
+        let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;
+        match pages.pop() {
+            Some(page) => Ok(page),
+            None => Err(Error::InvalidPageNumber(number.0)),
+        }
     }
 }
