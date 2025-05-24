@@ -30,9 +30,38 @@ ingenting annat.
 
 ## Installation
 
+### Cargo
+
+Installera [Rust] och kompilera från GitHub med `cargo`:
+
 ```sh
-cargo install --git https://github.com/lsjoeberg/textty
+cargo install --locked --git https://github.com/lsjoeberg/textty
 ```
+
+### Release
+
+1. Ladda ner lämplig förkompilerad binär från [senaste Release]
+2. Gör filen exekverbar (Linux, MacOS)
+3. Placera filen på din `PATH`
+
+Exempel:
+
+```sh
+curl -L https://github.com/lsjoeberg/textty/releases/download/v0.1.0/textty-linux-amd64 > textty
+chmod +x textty
+mv textty ~/.local/bin
+```
+
+### Kompilera från lokal källkod
+
+Kräver [Rust] installerat:
+
+```sh
+git clone https://github.com/lsjoeberg/textty && cd textty
+cargo install --path .
+```
+
+## Användning
 
 ### Terminal och typsnitt
 
@@ -48,8 +77,6 @@ det finns två alternativ för att rendera innehållet korrekt i terminalen:
 2. Använd en terminal-emulator med internt stöd för exotiska glyfer. Två
    kompetenta emulatorer som klarar att rendera teletext-glyfer utan
    konfiguration är [ghostty] och [wezterm].
-
-## Användning
 
 ### Gränssnitt och navigation
 
@@ -141,6 +168,8 @@ och uppdaterad information om SVT Text-TV finns på sida [711].
 <!-- Referenser -->
 [teletext]: https://sv.wikipedia.org/wiki/Text-TV
 [deathscrolling]: https://www.urbandictionary.com/define.php?term=deathscrolling
+[Rust]: https://www.rust-lang.org/tools/install
+[senaste Release]: https://github.com/lsjoeberg/textty/releases/latest
 [teletext-standarden]: https://en.wikipedia.org/wiki/Teletext_character_set
 [401]: https://www.svt.se/text-tv/401
 [block mosaics]: https://en.wikipedia.org/wiki/Teletext_character_set#G1_block_mosaics
