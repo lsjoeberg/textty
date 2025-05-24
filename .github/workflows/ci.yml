@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: moonrepo/setup-rust@v1
-      - run: cargo check
+      - run: cargo check --profile ci
 
   fmt:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       - uses: moonrepo/setup-rust@v1
         with:
           components: rustfmt
-      - run: cargo fmt --all -- --check
+      - run: cargo fmt --all --check
 
   clippy:
     runs-on: ubuntu-latest
@@ -32,11 +32,11 @@ jobs:
       - uses: moonrepo/setup-rust@v1
         with:
           components: clippy
-      - run: cargo clippy -- -D warnings
+      - run: cargo clippy --profile ci -- -D warnings
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: moonrepo/setup-rust@v1
-      - run: cargo test
+      - run: cargo test --profile ci

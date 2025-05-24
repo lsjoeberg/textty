@@ -21,6 +21,10 @@ serde-aux = "4.5.0"
 thiserror = "2.0.9"
 ureq = { version = "3.0.8", features = ["json"] }
 
+[profile.ci]
+inherits = "dev"
+debug = false
+
 [profile.release]
 strip = true
 lto = true
