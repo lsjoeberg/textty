@@ -8,6 +8,10 @@
 Textty är en TUI-klient för SVT Text-TV, med målet att replikera
 presentationen av innehållet från ursprungsformatet, [teletext].
 
+<div align="center">
+  <img src="https://ghr.s3.nl-ams.scw.cloud/textty/demo.gif" alt="demo"/>
+</div>
+
 ## Varför Text-TV i terminalen?
 
 De flesta läser idag nyheter på sin smartphone, men telefoners gränssnitt är
