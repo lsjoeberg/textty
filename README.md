@@ -68,17 +68,12 @@ ingenting annat.
 
 ## Installation
 
-### Cargo
-
-Installera [Rust] och kompilera från GitHub med `cargo`:
-
-```sh
-cargo install --locked --git https://github.com/lsjoeberg/textty
-```
+Installera genom att ladda ner en förkompilerad exekverbar fil från _releases_,
+eller kompilera själv från källkod.
 
 ### Release
 
-1. Ladda ner lämplig förkompilerad binär från [senaste Release]
+1. Ladda ner lämplig förkompilerad exekverbar binär från [senaste Release]
 2. Gör filen exekverbar (Linux, MacOS)
 3. Placera filen på din `PATH`
 
@@ -88,6 +83,14 @@ Exempel:
 curl -L https://github.com/lsjoeberg/textty/releases/download/v0.1.0/textty-linux-amd64 > textty
 chmod +x textty
 mv textty ~/.local/bin
+```
+
+### Cargo
+
+Installera [Rust] och kompilera från GitHub med `cargo`:
+
+```sh
+cargo install --locked --git https://github.com/lsjoeberg/textty
 ```
 
 ### Kompilera från lokal källkod
