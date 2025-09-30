@@ -149,11 +149,12 @@ Gränssnittet består av en *navigationsrad* ovanför visning av sidans innehål
 
 #### Kommandoläge
 
-| Keys  | Action                |
-|:------|:----------------------|
-| `:`   | enter page input mode |
-| `↵`   | submit page number    |
-| `Esc` | exit input mode       |
+| Keys    | Action                |
+|---------|-----------------------|
+| `:`     | enter page input mode |
+| `0`-`9` | input page number     |
+| `↵`     | submit page number    |
+| `Esc`   | exit input mode       |
 
 
 ## Alternativa klienter
