@@ -8,6 +8,44 @@
 Textty är en TUI-klient för SVT Text-TV, med målet att replikera
 presentationen av innehållet från ursprungsformatet, [teletext].
 
+
+## Demonstration
+
+<details>
+<summary>Sida 100: Hem</summary>
+<p align="center">
+  <img src="./media/100.png" alt="sida-100">
+</p>
+</details>
+
+<details>
+<summary>Sida 101: Inrikes</summary>
+<p align="center">
+  <img src="./media/101.png" alt="sida-101">
+</p>
+</details>
+
+<details>
+<summary>Sida 104: Utrikes</summary>
+<p align="center">
+  <img src="./media/104.png" alt="sida-104">
+</p>
+</details>
+
+<details>
+<summary>Sida 300: Sport</summary>
+<p align="center">
+  <img src="./media/300.png" alt="sida-300">
+</p>
+</details>
+
+<details>
+<summary>Sida 401: Väderkarta</summary>
+<p align="center">
+  <img src="./media/401.png" alt="sida-401">
+</p>
+</details>
+
 ## Varför Text-TV i terminalen?
 
 De flesta läser idag nyheter på sin smartphone, men telefoners gränssnitt är
@@ -114,42 +152,6 @@ Gränssnittet består av en *navigationsrad* ovanför visning av sidans innehål
 | `↵`   | submit page number    |
 | `Esc` | exit input mode       |
 
-### Demonstration
-
-<details>
-<summary>Sida 100: Hem</summary>
-<p align="center">
-  <img src="./media/100.png" alt="sida-100">
-</p>
-</details>
-
-<details>
-<summary>Sida 101: Inrikes</summary>
-<p align="center">
-  <img src="./media/101.png" alt="sida-101">
-</p>
-</details>
-
-<details>
-<summary>Sida 104: Utrikes</summary>
-<p align="center">
-  <img src="./media/104.png" alt="sida-104">
-</p>
-</details>
-
-<details>
-<summary>Sida 300: Sport</summary>
-<p align="center">
-  <img src="./media/300.png" alt="sida-300">
-</p>
-</details>
-
-<details>
-<summary>Sida 401: Väderkarta</summary>
-<p align="center">
-  <img src="./media/401.png" alt="sida-401">
-</p>
-</details>
 
 ## Alternativa klienter
 
