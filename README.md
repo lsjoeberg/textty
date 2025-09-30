@@ -8,6 +8,44 @@
 Textty är en TUI-klient för SVT Text-TV, med målet att replikera
 presentationen av innehållet från ursprungsformatet, [teletext].
 
+
+## Demonstration
+
+<details>
+<summary>Sida 100: Hem</summary>
+<p align="center">
+  <img src="./media/100.png" alt="sida-100">
+</p>
+</details>
+
+<details>
+<summary>Sida 101: Inrikes</summary>
+<p align="center">
+  <img src="./media/101.png" alt="sida-101">
+</p>
+</details>
+
+<details>
+<summary>Sida 104: Utrikes</summary>
+<p align="center">
+  <img src="./media/104.png" alt="sida-104">
+</p>
+</details>
+
+<details>
+<summary>Sida 300: Sport</summary>
+<p align="center">
+  <img src="./media/300.png" alt="sida-300">
+</p>
+</details>
+
+<details>
+<summary>Sida 401: Väderkarta</summary>
+<p align="center">
+  <img src="./media/401.png" alt="sida-401">
+</p>
+</details>
+
 ## Varför Text-TV i terminalen?
 
 De flesta läser idag nyheter på sin smartphone, men telefoners gränssnitt är
@@ -30,17 +68,12 @@ ingenting annat.
 
 ## Installation
 
-### Cargo
-
-Installera [Rust] och kompilera från GitHub med `cargo`:
-
-```sh
-cargo install --locked --git https://github.com/lsjoeberg/textty
-```
+Installera genom att ladda ner en förkompilerad exekverbar fil från _releases_,
+eller kompilera själv från källkod.
 
 ### Release
 
-1. Ladda ner lämplig förkompilerad binär från [senaste Release]
+1. Ladda ner lämplig förkompilerad exekverbar binär från [senaste Release]
 2. Gör filen exekverbar (Linux, MacOS)
 3. Placera filen på din `PATH`
 
@@ -50,6 +83,14 @@ Exempel:
 curl -L https://github.com/lsjoeberg/textty/releases/download/v0.1.0/textty-linux-amd64 > textty
 chmod +x textty
 mv textty ~/.local/bin
+```
+
+### Cargo
+
+Installera [Rust] och kompilera från GitHub med `cargo`:
+
+```sh
+cargo install --locked --git https://github.com/lsjoeberg/textty
 ```
 
 ### Kompilera från lokal källkod
@@ -108,48 +149,13 @@ Gränssnittet består av en *navigationsrad* ovanför visning av sidans innehål
 
 #### Kommandoläge
 
-| Keys  | Action                |
-|:------|:----------------------|
-| `:`   | enter page input mode |
-| `↵`   | submit page number    |
-| `Esc` | exit input mode       |
+| Keys    | Action                |
+|---------|-----------------------|
+| `:`     | enter page input mode |
+| `0`-`9` | input page number     |
+| `↵`     | submit page number    |
+| `Esc`   | exit input mode       |
 
-### Demonstration
-
-<details>
-<summary>Sida 100: Hem</summary>
-<p align="center">
-  <img src="./media/100.png" alt="sida-100">
-</p>
-</details>
-
-<details>
-<summary>Sida 101: Inrikes</summary>
-<p align="center">
-  <img src="./media/101.png" alt="sida-101">
-</p>
-</details>
-
-<details>
-<summary>Sida 104: Utrikes</summary>
-<p align="center">
-  <img src="./media/104.png" alt="sida-104">
-</p>
-</details>
-
-<details>
-<summary>Sida 300: Sport</summary>
-<p align="center">
-  <img src="./media/300.png" alt="sida-300">
-</p>
-</details>
-
-<details>
-<summary>Sida 401: Väderkarta</summary>
-<p align="center">
-  <img src="./media/401.png" alt="sida-401">
-</p>
-</details>
 
 ## Alternativa klienter
 
