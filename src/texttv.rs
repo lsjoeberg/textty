@@ -11,7 +11,7 @@ const APP_ID: &str = "textty";
 
 pub const HOME_PAGE_NR: u16 = 100;
 pub const MIN_PAGE_NR: u16 = 100;
-pub const MAX_PAGE_NR: u16 = 801;
+pub const MAX_PAGE_NR: u16 = 899;
 
 #[derive(Debug, Deserialize)]
 pub struct PageResponse {
@@ -80,15 +80,10 @@ impl Display for PageResponse {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PageNumber(u16);
 
-impl TryFrom<u16> for PageNumber {
-    type Error = Error;
-
-    fn try_from(value: u16) -> Result<Self, Self::Error> {
-        if (MIN_PAGE_NR..=MAX_PAGE_NR).contains(&value) {
-            Ok(Self(value))
-        } else {
-            Err(Error::InvalidPageNumber(value))
-        }
+impl From<u16> for PageNumber {
+    fn from(value: u16) -> Self {
+        let valid = u16::clamp(value, MIN_PAGE_NR, MAX_PAGE_NR);
+        Self(valid)
     }
 }
 

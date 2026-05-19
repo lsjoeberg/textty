@@ -157,7 +157,7 @@ impl App<'_> {
     fn get_current_page(&mut self) -> Result<()> {
         let response = self
             .client
-            .get_page(texttv::PageNumber::try_from(self.page_nr)?)?;
+            .get_page(texttv::PageNumber::from(self.page_nr))?;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
         self.page_index = 0;
