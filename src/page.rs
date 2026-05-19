@@ -65,8 +65,9 @@ impl FromStr for SpanStyle {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub enum BgColour {
+    #[default]
     Black,
     Blue,
     Cyan,
@@ -75,12 +76,6 @@ pub enum BgColour {
     Red,
     White,
     Yellow,
-}
-
-impl Default for BgColour {
-    fn default() -> Self {
-        Self::Black
-    }
 }
 
 impl FromStr for BgColour {
@@ -102,7 +97,7 @@ impl FromStr for BgColour {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub enum FgColour {
     Black,
     Blue,
@@ -110,14 +105,9 @@ pub enum FgColour {
     Green,
     Magenta,
     Red,
+    #[default]
     White,
     Yellow,
-}
-
-impl Default for FgColour {
-    fn default() -> Self {
-        Self::White
-    }
 }
 
 impl FromStr for FgColour {
@@ -237,7 +227,7 @@ mod tests {
                 },
             },
         ];
-        for case in test_cases.iter() {
+        for case in &test_cases {
             let result = SpanStyle::from_str(case.input).unwrap();
             assert_eq!(result, case.expected);
         }
