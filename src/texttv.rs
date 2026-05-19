@@ -109,7 +109,7 @@ impl Client {
     ///
     /// # Errors
     ///
-    /// * Returns [`Error::InvaldPageRange`] if `lo` is not less than or equal to `hi`.
+    /// * Returns [`Error::InvalidPageRange`] if `lo` is not less than or equal to `hi`.
     /// * Returns [`ureq::Error`] if API request fails in the network, I/O, or application stack.
     pub fn get_page_range(
         &self,
