@@ -11,7 +11,7 @@ const APP_ID: &str = "textty";
 
 pub const HOME_PAGE_NR: u16 = 100;
 pub const MIN_PAGE_NR: u16 = 100;
-pub const MAX_PAGE_NR: u16 = 801;
+pub const MAX_PAGE_NR: u16 = 899;
 
 #[derive(Debug, Deserialize)]
 pub struct PageResponse {
