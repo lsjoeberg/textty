@@ -18,14 +18,14 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: moonrepo/setup-rust@v1
       - run: cargo check --profile ci
 
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: moonrepo/setup-rust@v1
         with:
           components: rustfmt
@@ -34,7 +34,7 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: moonrepo/setup-rust@v1
         with:
           components: clippy
@@ -43,6 +43,6 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: moonrepo/setup-rust@v1
       - run: cargo test --profile ci

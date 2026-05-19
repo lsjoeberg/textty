@@ -36,7 +36,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Rust
         uses: moonrepo/setup-rust@v1
@@ -59,7 +59,7 @@ jobs:
           mv ${{ matrix.artifact }} ${{ matrix.name }}
 
       - name: Upload binary to release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
         with:
           files: target/${{ matrix.target }}/release/${{ matrix.name }}
