@@ -389,8 +389,13 @@ impl Widget for &App<'_> {
         );
         header.render(layout.header, buf);
 
-        // The current page content.
-        let content = Paragraph::new(self.page_set[self.page_index].clone()).centered();
+        // The current page content, empty if the page set has no subpages.
+        let page = self
+            .page_set
+            .get(self.page_index)
+            .cloned()
+            .unwrap_or_default();
+        let content = Paragraph::new(page).centered();
         content.render(layout.content, buf);
 
         // Add page updated timestamp as page footer.
