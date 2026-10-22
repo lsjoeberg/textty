@@ -194,6 +194,11 @@ impl App<'_> {
             }
         }
 
+        // The API can return a page without any subpages.
+        if page_set.is_empty() && self.status_msg.is_none() {
+            self.status_msg = Some(format!("Sidan {} saknar innehåll", response.num));
+        }
+
         self.page_set = page_set;
         Ok(())
     }
@@ -386,7 +391,12 @@ impl Widget for &App<'_> {
             Mode::Input => self.input_buffer.clone(),
             Mode::Help => String::new(), // FIXME: Remove.
         };
-        let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
+        // Omit the indicator when there are no subpages to count.
+        let scroll_indicator = if self.page_set.is_empty() {
+            String::new()
+        } else {
+            format!("{}/{}", self.page_index + 1, self.page_set.len())
+        };
         let header = Paragraph::new(format!(
             " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
             "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
