@@ -67,6 +67,8 @@ pub struct App<'a> {
     mode: Mode,
     input_buffer: String,
     use_plain: bool,
+    /// Message shown instead of the page content, e.g. when the page could not be displayed.
+    status_msg: Option<String>,
     exit: bool,
 }
 
@@ -162,12 +164,19 @@ impl App<'_> {
         self.prev_nr = response.prev_page;
         self.page_index = 0;
         self.updated_unix = response.date_updated_unix;
+        self.status_msg = None;
 
         let mut page_set = Vec::with_capacity(response.content.len());
         if self.use_plain {
-            if let Some(content_plain) = response.content_plain {
-                for content in content_plain {
-                    page_set.push(Text::from(content));
+            match response.content_plain {
+                Some(content_plain) => {
+                    for content in content_plain {
+                        page_set.push(Text::from(content));
+                    }
+                }
+                None => {
+                    self.status_msg =
+                        Some(format!("Oformaterad text saknas för sida {}", response.num));
                 }
             }
         } else {
@@ -389,14 +398,18 @@ impl Widget for &App<'_> {
         );
         header.render(layout.header, buf);
 
-        // The current page content, empty if the page set has no subpages.
-        let page = self
-            .page_set
-            .get(self.page_index)
-            .cloned()
-            .unwrap_or_default();
-        let content = Paragraph::new(page).centered();
-        content.render(layout.content, buf);
+        // The current page content, or a status message if there is nothing to show.
+        let content = if let Some(status) = &self.status_msg {
+            Paragraph::new(status.as_str())
+        } else {
+            let page = self
+                .page_set
+                .get(self.page_index)
+                .cloned()
+                .unwrap_or_default();
+            Paragraph::new(page)
+        };
+        content.centered().render(layout.content, buf);
 
         // Add page updated timestamp as page footer.
         let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
