@@ -331,7 +331,8 @@ impl App<'_> {
                 self.input_buffer.pop();
                 Ok(())
             }
-            KeyCode::Enter => {
+            // Stay in input mode on empty submit, there's nothing to go to.
+            KeyCode::Enter if !self.input_buffer.is_empty() => {
                 let requested_page = self.input_buffer.parse::<u16>()?;
                 // Wrap page number to valid range.
                 self.page_nr = requested_page.clamp(texttv::MIN_PAGE_NR, texttv::MAX_PAGE_NR);
