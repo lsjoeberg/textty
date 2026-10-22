@@ -32,7 +32,7 @@ impl FromStr for SpanStyle {
     // Parse colour codes from space-separated fields, e.g. 'bgB W bgImg'.
     // There can be 1-3 fields present in the string.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split(' ').collect::<Vec<&str>>();
+        let parts = s.split_whitespace().collect::<Vec<&str>>();
         match parts[..] {
             [s0] => {
                 let bg = s0.parse()?;
@@ -40,6 +40,14 @@ impl FromStr for SpanStyle {
                     bg,
                     fg: FgColour::default(),
                     mosaic: false,
+                })
+            }
+            [s0, "bgImg"] => {
+                let bg = s0.parse()?;
+                Ok(Self {
+                    bg,
+                    fg: FgColour::default(),
+                    mosaic: true,
                 })
             }
             [s0, s1] => {
@@ -223,6 +231,22 @@ mod tests {
                 expected: SpanStyle {
                     fg: FgColour::White,
                     bg: BgColour::Blue,
+                    mosaic: true,
+                },
+            },
+            TestCase {
+                input: "bgBl  W",
+                expected: SpanStyle {
+                    bg: BgColour::Black,
+                    fg: FgColour::White,
+                    mosaic: false,
+                },
+            },
+            TestCase {
+                input: "bgR Y bgImg",
+                expected: SpanStyle {
+                    bg: BgColour::Red,
+                    fg: FgColour::Yellow,
                     mosaic: true,
                 },
             },
