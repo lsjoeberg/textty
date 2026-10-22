@@ -131,7 +131,7 @@ impl FromStr for FgColour {
 fn parse_gif_id(attr: &str) -> Option<u64> {
     let start = attr.find(|c: char| c.is_ascii_digit())?;
     let end = attr.find(".gif")?;
-    attr[start..end].parse().ok()
+    attr.get(start..end)?.parse().ok()
 }
 
 /// Parse an HTML page from `texttv.nu/api` to a string that can be
@@ -231,5 +231,13 @@ mod tests {
             let result = SpanStyle::from_str(case.input).unwrap();
             assert_eq!(result, case.expected);
         }
+    }
+
+    #[test]
+    fn test_parse_gif_id() {
+        assert_eq!(parse_gif_id("url(/images/mos/123.gif)"), Some(123));
+        assert_eq!(parse_gif_id("url(/images/mos/abc.gif)"), None);
+        assert_eq!(parse_gif_id("url(/img.gif?v=2)"), None);
+        assert_eq!(parse_gif_id("url(/images/mos/123.png)"), None);
     }
 }
