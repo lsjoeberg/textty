@@ -32,7 +32,7 @@ impl FromStr for SpanStyle {
     // Parse colour codes from space-separated fields, e.g. 'bgB W bgImg'.
     // There can be 1-3 fields present in the string.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split(' ').collect::<Vec<&str>>();
+        let parts = s.split_whitespace().collect::<Vec<&str>>();
         match parts[..] {
             [s0] => {
                 let bg = s0.parse()?;
@@ -40,6 +40,14 @@ impl FromStr for SpanStyle {
                     bg,
                     fg: FgColour::default(),
                     mosaic: false,
+                })
+            }
+            [s0, "bgImg"] => {
+                let bg = s0.parse()?;
+                Ok(Self {
+                    bg,
+                    fg: FgColour::default(),
+                    mosaic: true,
                 })
             }
             [s0, s1] => {
@@ -131,7 +139,7 @@ impl FromStr for FgColour {
 fn parse_gif_id(attr: &str) -> Option<u64> {
     let start = attr.find(|c: char| c.is_ascii_digit())?;
     let end = attr.find(".gif")?;
-    attr[start..end].parse().ok()
+    attr.get(start..end)?.parse().ok()
 }
 
 /// Parse an HTML page from `texttv.nu/api` to a string that can be
@@ -161,11 +169,13 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
     for element in fragment.select(&selector) {
         let mut line = Vec::new();
         for c in element.child_elements() {
-            let Some(class_attr) = c.attr("class") else {
-                return Err(Error::ParseHtml("no class string to parse".into()));
+            // A child without colour classes still occupies cells on the line, so render
+            // its text with the default style rather than dropping it and shifting the
+            // rest of the line out of the fixed-width grid.
+            let parsed_style = match c.attr("class") {
+                Some(class_attr) => SpanStyle::from_str(class_attr)?,
+                None => SpanStyle::default(),
             };
-
-            let parsed_style = SpanStyle::from_str(class_attr)?;
 
             // If the HTML style references a GIF image, this means that a teletext mosaic
             // character should be picked to represent the GIF. Each mosaic has multiple
@@ -226,10 +236,34 @@ mod tests {
                     mosaic: true,
                 },
             },
+            TestCase {
+                input: "bgBl  W",
+                expected: SpanStyle {
+                    bg: BgColour::Black,
+                    fg: FgColour::White,
+                    mosaic: false,
+                },
+            },
+            TestCase {
+                input: "bgR Y bgImg",
+                expected: SpanStyle {
+                    bg: BgColour::Red,
+                    fg: FgColour::Yellow,
+                    mosaic: true,
+                },
+            },
         ];
         for case in &test_cases {
             let result = SpanStyle::from_str(case.input).unwrap();
             assert_eq!(result, case.expected);
         }
+    }
+
+    #[test]
+    fn test_parse_gif_id() {
+        assert_eq!(parse_gif_id("url(/images/mos/123.gif)"), Some(123));
+        assert_eq!(parse_gif_id("url(/images/mos/abc.gif)"), None);
+        assert_eq!(parse_gif_id("url(/img.gif?v=2)"), None);
+        assert_eq!(parse_gif_id("url(/images/mos/123.png)"), None);
     }
 }

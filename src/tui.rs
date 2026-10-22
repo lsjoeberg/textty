@@ -67,6 +67,8 @@ pub struct App<'a> {
     mode: Mode,
     input_buffer: String,
     use_plain: bool,
+    /// Message shown instead of the page content, e.g. when the page could not be displayed.
+    status_msg: Option<String>,
     exit: bool,
 }
 
@@ -162,12 +164,19 @@ impl App<'_> {
         self.prev_nr = response.prev_page;
         self.page_index = 0;
         self.updated_unix = response.date_updated_unix;
+        self.status_msg = None;
 
         let mut page_set = Vec::with_capacity(response.content.len());
         if self.use_plain {
-            if let Some(content_plain) = response.content_plain {
-                for content in content_plain {
-                    page_set.push(Text::from(content));
+            match response.content_plain {
+                Some(content_plain) => {
+                    for content in content_plain {
+                        page_set.push(Text::from(content));
+                    }
+                }
+                None => {
+                    self.status_msg =
+                        Some(format!("Oformaterad text saknas för sida {}", response.num));
                 }
             }
         } else {
@@ -183,6 +192,11 @@ impl App<'_> {
                 );
                 page_set.push(text);
             }
+        }
+
+        // The API can return a page without any subpages.
+        if page_set.is_empty() && self.status_msg.is_none() {
+            self.status_msg = Some(format!("Sidan {} saknar innehåll", response.num));
         }
 
         self.page_set = page_set;
@@ -331,7 +345,8 @@ impl App<'_> {
                 self.input_buffer.pop();
                 Ok(())
             }
-            KeyCode::Enter => {
+            // Stay in input mode on empty submit, there's nothing to go to.
+            KeyCode::Enter if !self.input_buffer.is_empty() => {
                 let requested_page = self.input_buffer.parse::<u16>()?;
                 // Wrap page number to valid range.
                 self.page_nr = requested_page.clamp(texttv::MIN_PAGE_NR, texttv::MAX_PAGE_NR);
@@ -376,7 +391,12 @@ impl Widget for &App<'_> {
             Mode::Input => self.input_buffer.clone(),
             Mode::Help => String::new(), // FIXME: Remove.
         };
-        let scroll_indicator = format!("{}/{}", self.page_index + 1, self.page_set.len());
+        // Omit the indicator when there are no subpages to count.
+        let scroll_indicator = if self.page_set.is_empty() {
+            String::new()
+        } else {
+            format!("{}/{}", self.page_index + 1, self.page_set.len())
+        };
         let header = Paragraph::new(format!(
             " {:<12}{:>3} ◀ {:>3} ▶ {:>3}{:>12}",
             "", self.prev_nr, current_page_str, self.next_nr, scroll_indicator,
@@ -388,9 +408,18 @@ impl Widget for &App<'_> {
         );
         header.render(layout.header, buf);
 
-        // The current page content.
-        let content = Paragraph::new(self.page_set[self.page_index].clone()).centered();
-        content.render(layout.content, buf);
+        // The current page content, or a status message if there is nothing to show.
+        let content = if let Some(status) = &self.status_msg {
+            Paragraph::new(status.as_str())
+        } else {
+            let page = self
+                .page_set
+                .get(self.page_index)
+                .cloned()
+                .unwrap_or_default();
+            Paragraph::new(page)
+        };
+        content.centered().render(layout.content, buf);
 
         // Add page updated timestamp as page footer.
         let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
