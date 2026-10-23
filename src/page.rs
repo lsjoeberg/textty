@@ -169,11 +169,13 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
     for element in fragment.select(&selector) {
         let mut line = Vec::new();
         for c in element.child_elements() {
-            let Some(class_attr) = c.attr("class") else {
-                return Err(Error::ParseHtml("no class string to parse".into()));
+            // A child without colour classes still occupies cells on the line, so render
+            // its text with the default style rather than dropping it and shifting the
+            // rest of the line out of the fixed-width grid.
+            let parsed_style = match c.attr("class") {
+                Some(class_attr) => SpanStyle::from_str(class_attr)?,
+                None => SpanStyle::default(),
             };
-
-            let parsed_style = SpanStyle::from_str(class_attr)?;
 
             // If the HTML style references a GIF image, this means that a teletext mosaic
             // character should be picked to represent the GIF. Each mosaic has multiple
