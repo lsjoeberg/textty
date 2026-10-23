@@ -9,6 +9,10 @@ use std::fmt::{self, Display, Formatter};
 const BASE_URL: &str = "https://texttv.nu/api";
 const APP_ID: &str = "textty";
 
+/// Query parameters sent with every page request, with and without plain text content.
+static QUERY: [(&str, &str); 1] = [("app", APP_ID)];
+static QUERY_PLAIN: [(&str, &str); 2] = [("app", APP_ID), ("includePlainTextContent", "1")];
+
 pub const HOME_PAGE_NR: u16 = 100;
 pub const MIN_PAGE_NR: u16 = 100;
 pub const MAX_PAGE_NR: u16 = 899;
@@ -90,16 +94,33 @@ impl From<u16> for PageNumber {
 #[derive(Debug)]
 pub struct Client {
     inner: ureq::Agent,
+    /// Whether to request the plain text content of a page.
+    plain: bool,
 }
 
 impl Default for Client {
     fn default() -> Self {
-        let agent = ureq::agent();
-        Self { inner: agent }
+        Self {
+            inner: ureq::agent(),
+            plain: false,
+        }
     }
 }
 
 impl Client {
+    #[must_use]
+    pub fn new(plain: bool) -> Self {
+        Self {
+            plain,
+            ..Default::default()
+        }
+    }
+
+    /// The query parameters to send with every page request.
+    const fn query_pairs(&self) -> &'static [(&'static str, &'static str)] {
+        if self.plain { &QUERY_PLAIN } else { &QUERY }
+    }
+
     /// Get a range of pages from `texttv.nu`; from `lo` to `hi`.
     ///
     /// # Errors
@@ -118,7 +139,7 @@ impl Client {
         let mut response = self
             .inner
             .get(&url)
-            .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+            .query_pairs(self.query_pairs().iter().copied())
             .call()?;
 
         let pages: Vec<PageResponse> = response.body_mut().read_json()?;
@@ -136,7 +157,7 @@ impl Client {
         let mut response = self
             .inner
             .get(&url)
-            .query_pairs([("app", APP_ID), ("includePlainTextContent", "1")])
+            .query_pairs(self.query_pairs().iter().copied())
             .call()?;
 
         let mut pages: Vec<PageResponse> = response.body_mut().read_json()?;

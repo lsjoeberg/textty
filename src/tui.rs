@@ -148,6 +148,7 @@ impl App<'_> {
     #[must_use]
     pub fn new(plain: bool) -> Self {
         Self {
+            client: texttv::Client::new(plain),
             page_nr: texttv::HOME_PAGE_NR,
             use_plain: plain,
             ..Default::default()
