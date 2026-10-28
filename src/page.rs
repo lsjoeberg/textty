@@ -171,7 +171,7 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
         Vec::new()
     };
 
-    for element in fragment.select(&selector) {
+    for element in selection {
         let mut line = Vec::new();
         for c in element.child_elements() {
             // A child without colour classes still occupies cells on the line, so render
