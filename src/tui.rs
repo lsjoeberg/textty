@@ -384,9 +384,9 @@ impl Widget for &App<'_> {
 
         // In command-mode, display the input buffer instead of current page.
         let current_page_str = match self.mode {
-            Mode::Normal => self.page_nr.to_string(),
-            Mode::Input => self.input_buffer.clone(),
-            Mode::Help => String::new(), // FIXME: Remove.
+            Mode::Normal => Cow::Owned(self.page_nr.to_string()),
+            Mode::Input => Cow::Borrowed(self.input_buffer.as_str()),
+            Mode::Help => Cow::Borrowed(""),
         };
         // Omit the indicator when there are no subpages to count.
         let scroll_indicator = if self.page_set.is_empty() {
