@@ -17,14 +17,14 @@ pub const HOME_PAGE_NR: u16 = 100;
 pub const MIN_PAGE_NR: u16 = 100;
 pub const MAX_PAGE_NR: u16 = 899;
 
+/// One page from the texttv.nu API.
+///
+/// The JSON also carries `title`, `permalink`, `id`, and `breadcrumbs`. Those keys are ignored.
 #[derive(Debug, Deserialize)]
 pub struct PageResponse {
     /// The page number.
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub num: u16,
-
-    /// The page title.
-    pub title: String,
 
     /// The page content as HTML.
     pub content: Vec<String>,
@@ -43,31 +43,6 @@ pub struct PageResponse {
 
     /// A UNIX timestamp representing the time the page was last updated.
     pub date_updated_unix: i64,
-
-    /// A permanent link to the current page state.
-    pub permalink: String,
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-
-    /// A unique ID for the current page state.
-    pub id: u64,
-
-    /// A list of links relative to the public host of the web service,
-    /// `https://texttv.nu`, defining the current page's location within
-    /// the site's hierarchical structure.
-    pub breadcrumbs: Vec<Breadcrumb>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Breadcrumb {
-    /// The name of the page.
-    pub name: String,
-
-    /// The relative URL of the page.
-    pub url: String,
-
-    /// The page number.
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub num: u16,
 }
 
 impl Display for PageResponse {
