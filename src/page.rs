@@ -3,6 +3,11 @@ use crate::mosaic;
 use scraper::{Html, Selector};
 use std::str::FromStr;
 
+/// The standard number of rows (lines) per teletext page.
+pub const N_ROWS: u16 = 24;
+/// The standard number of columns (characters) per teletext page.
+pub const N_COLS: u16 = 40;
+
 #[derive(Debug)]
 pub struct Span {
     pub style: SpanStyle,
@@ -163,15 +168,13 @@ pub fn parse(html: &str) -> Result<Vec<Vec<Span>>, Error> {
         return Err(Error::ParseHtml("invalid texttv.nu HTML".into()));
     };
 
-    // TODO: Preallocate string with some reasonable size.
-    let selection = fragment.select(&selector);
-    let mut page: Vec<Vec<Span>> = if let (_, Some(hi)) = selection.size_hint() {
-        Vec::with_capacity(hi)
-    } else {
-        Vec::new()
-    };
+    // Preallocate using the number of lines for a standard SVT page; verified empirically to not
+    // grow. Double-height rows collapse into one line element, so a parsed page can be shorter.
+    // `Select::size_hint` is not a match count: its upper bound is the number of nodes in the
+    // document. The inner elements (columns) is more dynamic, making a good preallocation harder.
+    let mut page = Vec::with_capacity(N_ROWS as usize);
 
-    for element in selection {
+    for element in fragment.select(&selector) {
         let mut line = Vec::new();
         for c in element.child_elements() {
             // A child without colour classes still occupies cells on the line, so render

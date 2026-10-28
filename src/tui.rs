@@ -89,12 +89,12 @@ pub struct PageLayout {
 
 impl From<Rect> for PageLayout {
     fn from(area: Rect) -> Self {
-        let [area] = Layout::horizontal([Constraint::Length(40)])
+        let [area] = Layout::horizontal([Constraint::Length(page::N_COLS)])
             .flex(Flex::Center)
             .areas(area);
         let [header, content, footer] = Layout::vertical([
             Constraint::Length(2),
-            Constraint::Length(24),
+            Constraint::Length(page::N_ROWS),
             Constraint::Length(2),
         ])
         .flex(Flex::Center)
@@ -128,10 +128,10 @@ Esc   exit input mode
 
 impl Widget for HelpWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let [area] = Layout::horizontal([Constraint::Length(40)])
+        let [area] = Layout::horizontal([Constraint::Length(page::N_COLS)])
             .flex(Flex::Center)
             .areas(area);
-        let [area] = Layout::vertical([Constraint::Length(24)])
+        let [area] = Layout::vertical([Constraint::Length(page::N_ROWS)])
             .flex(Flex::Center)
             .areas(area);
         let help = Paragraph::new(HELP_TEXT).left_aligned().block(
