@@ -185,7 +185,7 @@ impl App<'_> {
                 let raw_page = page::parse(content)?;
                 let lines = raw_page
                     .into_iter()
-                    .map(|line| Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>()))
+                    .map(|line| line.into_iter().map(Span::from).collect::<Line>())
                     .collect::<Vec<_>>();
                 page_set.push(Paragraph::new(lines).centered());
             }
