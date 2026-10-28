@@ -7,7 +7,7 @@ use ratatui::{
     crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
     layout::{Constraint, Flex, Layout, Rect},
     style::{Style, Stylize},
-    text::{Line, Span, Text},
+    text::{Line, Span},
     widgets::{Block, Borders, Padding, Paragraph, Widget},
 };
 use std::borrow::Cow;
@@ -58,7 +58,7 @@ impl From<page::FgColour> for ratatui::style::Color {
 #[derive(Debug, Default)]
 pub struct App<'a> {
     client: texttv::Client,
-    page_set: Vec<Text<'a>>,
+    page_set: Vec<Paragraph<'a>>,
     page_index: usize,
     page_nr: u16,
     next_nr: u16,
@@ -156,7 +156,7 @@ impl App<'_> {
     }
 
     /// Fetches the current page from the web, parses the page set into
-    /// [`Text`] objects, and updates the app state.
+    /// [`Paragraph`] objects, and updates the app state.
     fn get_current_page(&mut self) -> Result<()> {
         let response = self
             .client
@@ -172,7 +172,7 @@ impl App<'_> {
             match response.content_plain {
                 Some(content_plain) => {
                     for content in content_plain {
-                        page_set.push(Text::from(content));
+                        page_set.push(Paragraph::new(content).centered());
                     }
                 }
                 None => {
@@ -183,15 +183,11 @@ impl App<'_> {
         } else {
             for content in &response.content {
                 let raw_page = page::parse(content)?;
-                let text = Text::from(
-                    raw_page
-                        .into_iter()
-                        .map(|line| {
-                            Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>())
-                        })
-                        .collect::<Vec<_>>(),
-                );
-                page_set.push(text);
+                let lines = raw_page
+                    .into_iter()
+                    .map(|line| Line::from(line.into_iter().map(Span::from).collect::<Vec<_>>()))
+                    .collect::<Vec<_>>();
+                page_set.push(Paragraph::new(lines).centered());
             }
         }
 
@@ -410,17 +406,14 @@ impl Widget for &App<'_> {
         header.render(layout.header, buf);
 
         // The current page content, or a status message if there is nothing to show.
-        let content = if let Some(status) = &self.status_msg {
+        // Pages are built once per fetch, so this borrows instead of cloning the page each frame.
+        if let Some(status) = &self.status_msg {
             Paragraph::new(status.as_str())
-        } else {
-            let page = self
-                .page_set
-                .get(self.page_index)
-                .cloned()
-                .unwrap_or_default();
-            Paragraph::new(page)
-        };
-        content.centered().render(layout.content, buf);
+                .centered()
+                .render(layout.content, buf);
+        } else if let Some(page) = self.page_set.get(self.page_index) {
+            page.render(layout.content, buf);
+        }
 
         // Add page updated timestamp as page footer.
         let updated = match DateTime::from_timestamp(self.updated_unix, 0) {
