@@ -32,9 +32,14 @@ impl FromStr for SpanStyle {
     // Parse colour codes from space-separated fields, e.g. 'bgB W bgImg'.
     // There can be 1-3 fields present in the string.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parts = s.split_whitespace().collect::<Vec<&str>>();
-        match parts[..] {
-            [s0] => {
+        let mut parts = s.split_whitespace();
+        let (s0, s1, s2) = (parts.next(), parts.next(), parts.next());
+        // A fourth token cannot be a valid class.
+        if parts.next().is_some() {
+            return Err(Error::ParseHtml(format!("invalid svt colour class: {s}")));
+        }
+        match (s0, s1, s2) {
+            (Some(s0), None, None) => {
                 let bg = s0.parse()?;
                 Ok(Self {
                     bg,
@@ -42,7 +47,7 @@ impl FromStr for SpanStyle {
                     mosaic: false,
                 })
             }
-            [s0, "bgImg"] => {
+            (Some(s0), Some("bgImg"), None) => {
                 let bg = s0.parse()?;
                 Ok(Self {
                     bg,
@@ -50,7 +55,7 @@ impl FromStr for SpanStyle {
                     mosaic: true,
                 })
             }
-            [s0, s1] => {
+            (Some(s0), Some(s1), None) => {
                 let bg = s0.parse()?;
                 let fg = s1.parse()?;
                 Ok(Self {
@@ -59,7 +64,7 @@ impl FromStr for SpanStyle {
                     mosaic: false,
                 })
             }
-            [s0, s1, "bgImg"] => {
+            (Some(s0), Some(s1), Some("bgImg")) => {
                 let bg = s0.parse()?;
                 let fg = s1.parse()?;
                 Ok(Self {
