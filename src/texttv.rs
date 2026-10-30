@@ -5,6 +5,7 @@ use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
 use std::cmp::PartialOrd;
 use std::fmt::{self, Display, Formatter};
+use std::time::Duration;
 
 const BASE_URL: &str = "https://texttv.nu/api";
 const APP_ID: &str = "textty";
@@ -16,6 +17,10 @@ static QUERY_PLAIN: [(&str, &str); 2] = [("app", APP_ID), ("includePlainTextCont
 pub const HOME_PAGE_NR: u16 = 100;
 pub const MIN_PAGE_NR: u16 = 100;
 pub const MAX_PAGE_NR: u16 = 899;
+
+/// Bound for one page request. A background fetch cannot be cancelled, so a hung
+/// peer must not keep its thread blocked for the rest of the process.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// One page from the texttv.nu API.
 ///
@@ -66,7 +71,7 @@ impl From<u16> for PageNumber {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Client {
     inner: ureq::Agent,
     /// Whether to request the plain text content of a page.
@@ -75,8 +80,12 @@ pub struct Client {
 
 impl Default for Client {
     fn default() -> Self {
+        let inner = ureq::Agent::config_builder()
+            .timeout_global(Some(REQUEST_TIMEOUT))
+            .build()
+            .into();
         Self {
-            inner: ureq::agent(),
+            inner,
             plain: false,
         }
     }

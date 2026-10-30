@@ -11,6 +11,9 @@ use ratatui::{
     widgets::{Block, Borders, Padding, Paragraph, Widget},
 };
 use std::borrow::Cow;
+use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::thread;
+use std::time::Duration;
 
 impl From<page::Span> for Span<'_> {
     fn from(value: page::Span) -> Self {
@@ -69,8 +72,20 @@ pub struct App<'a> {
     use_plain: bool,
     /// Message shown instead of the page content, e.g. when the page could not be displayed.
     status_msg: Option<String>,
+    /// Page fetch running off the UI thread. Dropping this drops the receiver, so a late
+    /// response from an older fetch is ignored.
+    inflight: Option<Inflight>,
     exit: bool,
 }
+
+/// Result of a page fetch started on a background thread.
+#[derive(Debug)]
+struct Inflight {
+    rx: Receiver<Result<texttv::PageResponse, crate::error::Error>>,
+}
+
+/// How long to wait for a key while a fetch is in flight, so the loop can redraw when it finishes.
+const FETCH_POLL: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum Mode {
@@ -155,63 +170,104 @@ impl App<'_> {
         }
     }
 
-    /// Fetches the current page from the web, parses the page set into
-    /// [`Paragraph`] objects, and updates the app state.
-    fn get_current_page(&mut self) -> Result<()> {
-        let response = self
-            .client
-            .get_page(texttv::PageNumber::from(self.page_nr))?;
+    /// Fetch `self.page_nr` on a background thread. The current page stays on screen.
+    ///
+    /// Replacing [`Self::inflight`] drops the previous receiver. The old thread runs until
+    /// the agent timeout, and its response is discarded.
+    fn request_page(&mut self) {
+        self.status_msg = if self.page_set.is_empty() {
+            Some(format!("Hämtar sida {}…", self.page_nr))
+        } else {
+            None
+        };
+
+        let (tx, rx) = mpsc::channel();
+        let client = self.client.clone();
+        let page_nr = self.page_nr;
+        thread::spawn(move || {
+            let _ = tx.send(client.get_page(texttv::PageNumber::from(page_nr)));
+        });
+        self.inflight = Some(Inflight { rx });
+    }
+
+    /// Apply a finished fetch. Parse failures stay in the UI as `status_msg`.
+    fn apply_page(&mut self, mut response: texttv::PageResponse) {
+        self.page_nr = response.num;
         self.next_nr = response.next_page;
         self.prev_nr = response.prev_page;
         self.page_index = 0;
         self.updated_unix = response.date_updated_unix;
-        self.status_msg = None;
 
-        let mut page_set = Vec::with_capacity(response.content.len());
-        if self.use_plain {
-            match response.content_plain {
-                Some(content_plain) => {
-                    for content in content_plain {
-                        page_set.push(Paragraph::new(content).centered());
+        let use_plain = self.use_plain;
+        let built = (|| -> Result<_, crate::error::Error> {
+            let mut page_set = Vec::with_capacity(response.content.len());
+            let mut status = None;
+            if use_plain {
+                match response.content_plain.take() {
+                    Some(content_plain) => {
+                        for content in content_plain {
+                            page_set.push(Paragraph::new(content).centered());
+                        }
+                    }
+                    None => {
+                        status = Some(format!("Oformaterad text saknas för sida {}", response.num));
                     }
                 }
-                None => {
-                    self.status_msg =
-                        Some(format!("Oformaterad text saknas för sida {}", response.num));
+            } else {
+                for content in &response.content {
+                    let raw_page = page::parse(content)?;
+                    let lines = raw_page
+                        .into_iter()
+                        .map(|line| line.into_iter().map(Span::from).collect::<Line>())
+                        .collect::<Vec<_>>();
+                    page_set.push(Paragraph::new(lines).centered());
                 }
             }
-        } else {
-            for content in &response.content {
-                let raw_page = page::parse(content)?;
-                let lines = raw_page
-                    .into_iter()
-                    .map(|line| line.into_iter().map(Span::from).collect::<Line>())
-                    .collect::<Vec<_>>();
-                page_set.push(Paragraph::new(lines).centered());
+            // The API can return a page without any subpages.
+            if page_set.is_empty() && status.is_none() {
+                status = Some(format!("Sidan {} saknar innehåll", response.num));
+            }
+            Ok((page_set, status))
+        })();
+
+        match built {
+            Ok((page_set, status)) => {
+                self.page_set = page_set;
+                self.status_msg = status;
+            }
+            Err(err) => {
+                self.status_msg = Some(format!("Kunde inte läsa sida {}: {err}", response.num));
             }
         }
+    }
 
-        // The API can return a page without any subpages.
-        if page_set.is_empty() && self.status_msg.is_none() {
-            self.status_msg = Some(format!("Sidan {} saknar innehåll", response.num));
+    /// Take a finished fetch, if one is ready.
+    fn poll_fetch(&mut self) {
+        let Some(inflight) = self.inflight.take() else {
+            return;
+        };
+        match inflight.rx.try_recv() {
+            Err(TryRecvError::Empty) => self.inflight = Some(inflight),
+            Err(TryRecvError::Disconnected) => {
+                self.status_msg = Some(format!("Kunde inte hämta sida {}", self.page_nr));
+            }
+            Ok(Ok(response)) => self.apply_page(response),
+            Ok(Err(err)) => {
+                self.status_msg = Some(format!("Kunde inte hämta sida {}: {err}", self.page_nr));
+            }
         }
-
-        self.page_set = page_set;
-        Ok(())
     }
 
     /// Go to next page.
-    fn next_page(&mut self) -> Result<()> {
+    fn next_page(&mut self) {
         self.page_nr = self.next_nr;
-        self.get_current_page()?;
-        Ok(())
+        self.request_page();
     }
 
     /// Go to previous page.
-    fn prev_page(&mut self) -> Result<()> {
+    fn prev_page(&mut self) {
         self.page_nr = self.prev_nr;
-        self.get_current_page()?;
-        Ok(())
+        self.request_page();
     }
 
     /// Go to previous page in the page set.
@@ -235,8 +291,7 @@ impl App<'_> {
     ///
     /// Will return any `Err` that may occur in the application.
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
-        // Get home page on startup.
-        self.get_current_page()?;
+        self.request_page();
 
         while !self.exit {
             terminal.draw(|frame| self.render_ui(frame))?;
@@ -260,13 +315,23 @@ impl App<'_> {
 
     /// Reads the crossterm events and updates the state of [`App`].
     fn handle_crossterm_events(&mut self) -> Result<()> {
-        match event::read()? {
-            // it's important to check KeyEventKind::Press to avoid handling key release events
-            Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key)?,
-            // Event::Mouse(_) => {}
-            // Event::Resize(_, _) => {}
-            _ => {}
+        // Block while idle. While a fetch is running, wake often enough to draw the result
+        // without waiting for the next key.
+        let has_event = if self.inflight.is_some() {
+            event::poll(FETCH_POLL)?
+        } else {
+            true
+        };
+        if has_event {
+            match event::read()? {
+                // it's important to check KeyEventKind::Press to avoid handling key release events
+                Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key)?,
+                // Event::Mouse(_) => {}
+                // Event::Resize(_, _) => {}
+                _ => {}
+            }
         }
+        self.poll_fetch();
         Ok(())
     }
 
@@ -286,12 +351,12 @@ impl App<'_> {
     fn handle_key_event_normal(&mut self, code: KeyCode) -> Result<()> {
         match code {
             KeyCode::Right | KeyCode::Char('l') => {
-                self.page_nr = self.next_nr;
-                self.next_page()
+                self.next_page();
+                Ok(())
             }
             KeyCode::Left | KeyCode::Char('h') => {
-                self.page_nr = self.prev_nr;
-                self.prev_page()
+                self.prev_page();
+                Ok(())
             }
             KeyCode::Up | KeyCode::Char('k') => {
                 self.scroll_prev();
@@ -305,7 +370,8 @@ impl App<'_> {
                 if let Some(i) = a.to_digit(10) {
                     if (1..9).contains(&i) {
                         self.page_nr = u16::try_from(i)? * 100;
-                        return self.get_current_page();
+                        self.request_page();
+                        return Ok(());
                     }
                 }
                 Ok(())
@@ -319,7 +385,10 @@ impl App<'_> {
                 self.mode = Mode::Help;
                 Ok(())
             }
-            KeyCode::Char('r') => self.get_current_page(),
+            KeyCode::Char('r') => {
+                self.request_page();
+                Ok(())
+            }
             KeyCode::Char('q') => {
                 self.quit();
                 Ok(())
@@ -349,7 +418,8 @@ impl App<'_> {
                 self.page_nr = requested_page.clamp(texttv::MIN_PAGE_NR, texttv::MAX_PAGE_NR);
                 self.input_buffer.clear();
                 self.mode = Mode::Normal;
-                self.get_current_page()
+                self.request_page();
+                Ok(())
             }
             KeyCode::Esc => {
                 self.mode = Mode::Normal;
@@ -420,7 +490,12 @@ impl Widget for &App<'_> {
             Some(dt) => dt.with_timezone(&Local).format("%H:%M").to_string(),
             None => "N/A".to_string(),
         };
-        let footer = Paragraph::new(format!("Sidan uppdaterad: {updated}"))
+        let footer_text = if self.inflight.is_some() {
+            "Hämtar…".to_string()
+        } else {
+            format!("Sidan uppdaterad: {updated}")
+        };
+        let footer = Paragraph::new(footer_text)
             .centered()
             .dim()
             .block(Block::new().borders(Borders::TOP));
