@@ -4,13 +4,21 @@ use color_eyre::Result;
 use ratatui::{
     DefaultTerminal, Frame,
     buffer::Buffer,
-    crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind},
+    crossterm::{
+        event::{
+            self, Event, KeyCode, KeyEvent, KeyEventKind, KeyboardEnhancementFlags,
+            PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+        },
+        execute,
+        terminal::supports_keyboard_enhancement,
+    },
     layout::{Constraint, Flex, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Span},
     widgets::{Block, Borders, Padding, Paragraph, Widget},
 };
 use std::borrow::Cow;
+use std::io::stdout;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::thread;
 use std::time::Duration;
@@ -86,6 +94,33 @@ struct Inflight {
 
 /// How long to wait for a key while a fetch is in flight, so the loop can redraw when it finishes.
 const FETCH_POLL: Duration = Duration::from_millis(100);
+
+/// Pops the keyboard protocol on drop, including when the UI panics.
+struct KeyEventKinds {
+    enabled: bool,
+}
+
+impl KeyEventKinds {
+    /// Ask the terminal to tag auto-repeat as [`KeyEventKind::Repeat`] and key-up as
+    /// [`KeyEventKind::Release`]. Plain keys (`h`, `l`) need every key reported as an escape
+    /// sequence, or a hold of those keys still arrives as a stream of presses.
+    fn enable() -> Self {
+        let wanted = KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+            | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+            | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
+        let enabled = supports_keyboard_enhancement().unwrap_or(false)
+            && execute!(stdout(), PushKeyboardEnhancementFlags(wanted)).is_ok();
+        Self { enabled }
+    }
+}
+
+impl Drop for KeyEventKinds {
+    fn drop(&mut self) {
+        if self.enabled {
+            let _ = execute!(stdout(), PopKeyboardEnhancementFlags);
+        }
+    }
+}
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub enum Mode {
@@ -291,6 +326,7 @@ impl App<'_> {
     ///
     /// Will return any `Err` that may occur in the application.
     pub fn run(mut self, mut terminal: DefaultTerminal) -> Result<()> {
+        let _key_events = KeyEventKinds::enable();
         self.request_page();
 
         while !self.exit {
@@ -324,8 +360,8 @@ impl App<'_> {
         };
         if has_event {
             match event::read()? {
-                // it's important to check KeyEventKind::Press to avoid handling key release events
-                Event::Key(key) if key.kind == KeyEventKind::Press => self.on_key_event(key)?,
+                // Release is the key going up. Repeat is auto-repeat while it is held.
+                Event::Key(key) if key.kind != KeyEventKind::Release => self.on_key_event(key)?,
                 // Event::Mouse(_) => {}
                 // Event::Resize(_, _) => {}
                 _ => {}
@@ -338,7 +374,7 @@ impl App<'_> {
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) -> Result<()> {
         match self.mode {
-            Mode::Normal => self.handle_key_event_normal(key.code),
+            Mode::Normal => self.handle_key_event_normal(key),
             Mode::Input => self.handle_key_event_input(key.code),
             Mode::Help => {
                 self.handle_key_event_help(key.code);
@@ -348,8 +384,24 @@ impl App<'_> {
     }
 
     /// Handle valid events in normal mode.
-    fn handle_key_event_normal(&mut self, code: KeyCode) -> Result<()> {
-        match code {
+    fn handle_key_event_normal(&mut self, key: KeyEvent) -> Result<()> {
+        // A held page-nav key is one fetch. Up/down still repeat, because they scroll a page
+        // that is already loaded. A press after a release is a new `Press`, so rapid taps count.
+        if key.kind == KeyEventKind::Repeat {
+            return match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.scroll_prev();
+                    Ok(())
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.scroll_next();
+                    Ok(())
+                }
+                _ => Ok(()),
+            };
+        }
+
+        match key.code {
             KeyCode::Right | KeyCode::Char('l') => {
                 self.next_page();
                 Ok(())
